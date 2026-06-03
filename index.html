@@ -2,18 +2,49 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, viewport-fit=cover">
   <title>ไทยช่วยไทยพลัส</title>
   
-  <link rel="manifest" href='data:application/manifest+json,{"name":"ไทยช่วยไทยพลัส","short_name":"ไทยช่วยไทย","start_url":".","display":"standalone","background_color":"#f9fafb","theme_color":"#ffffff","icons":[{"src":"https://img1.pic.in.th/images/-83_20260603112901.png","sizes":"512x512","type":"image/png","purpose":"any maskable"},{"src":"https://img1.pic.in.th/images/-83_20260603112901.png","sizes":"192x192","type":"image/png","purpose":"any maskable"}]}'>
-  <link rel="icon" type="image/png" href="https://img1.pic.in.th/images/-83_20260603112901.png">
-  <link rel="apple-touch-icon" href="https://img1.pic.in.th/images/-83_20260603112901.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#ffffff">
   
+  <!-- ตั้งค่าสำหรับ iOS Safari (Apple) -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="ไทยช่วยไทย">
-  <meta name="theme-color" content="#ffffff">
+  <link rel="apple-touch-icon" href="https://img1.pic.in.th/images/-83_20260603112901.png">
+  <link rel="icon" sizes="192x192" href="https://img1.pic.in.th/images/-83_20260603112901.png">
   
+  <!-- แท็ก Manifest ที่จะถูกสร้างด้วย Javascript เพื่อรองรับ Android แบบ 100% -->
+  <link id="dynamic-manifest" rel="manifest" href="">
+
+  <script>
+    // 1. สร้าง Manifest อัตโนมัติ เพื่อให้ Android อ่านค่าและโลโก้ได้ชัวร์ 100%
+    const manifestObj = {
+      name: "ไทยช่วยไทยพลัส Pro",
+      short_name: "ไทยช่วยไทย",
+      start_url: window.location.href.split('?')[0],
+      display: "standalone",
+      background_color: "#f9fafb",
+      theme_color: "#ffffff",
+      icons: [
+        { src: "https://img1.pic.in.th/images/-83_20260603112901.png", sizes: "192x192", type: "image/png", purpose: "any maskable" },
+        { src: "https://img1.pic.in.th/images/-83_20260603112901.png", sizes: "512x512", type: "image/png", purpose: "any maskable" }
+      ]
+    };
+    const manifestBlob = new Blob([JSON.stringify(manifestObj)], {type: 'application/manifest+json'});
+    document.getElementById('dynamic-manifest').href = URL.createObjectURL(manifestBlob);
+
+    // 2. สร้าง Service Worker จำลอง (ข้อบังคับของ Android เพื่อติดตั้งแอปเต็มจอแบบ WebAPK)
+    if ('serviceWorker' in navigator) {
+      const swCode = "self.addEventListener('fetch', function(e) {});";
+      const swBlob = new Blob([swCode], { type: 'application/javascript' });
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(err => console.log('SW Setup Failed', err));
+      });
+    }
+  </script>
+
   <script src="https://cdn.tailwindcss.com"></script>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
@@ -29,6 +60,7 @@
     .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0.5rem); }
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    input[type="date"], input[type="time"] { font-size: 16px !important; }
     
     @keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     .animate-slide-down { animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
@@ -44,7 +76,6 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
-    // --- ไอคอนต่างๆ ---
     const Icons = {
       Wallet: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>,
       Tag: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42l-8.704-8.704z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></svg>,
@@ -61,7 +92,6 @@
       ChevronDown: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
     };
 
-    // --- ฟังก์ชันจัดการเวลาที่ปลอดภัย 100% ---
     const getSafeDateObj = (dateStr, timeStr) => {
       try {
         if (!dateStr || !timeStr) return new Date();
@@ -135,7 +165,7 @@
       
       const [showHistory, setShowHistory] = useState(false);
       const [historyFilter, setHistoryFilter] = useState('today'); 
-      const [expandedMonth, setExpandedMonth] = useState(null); // สำหรับกาง/หุบ เดือนในแท็บทั้งหมด
+      const [expandedMonth, setExpandedMonth] = useState(null); 
 
       const [showToast, setShowToast] = useState(false);
       const [toastMsg, setToastMsg] = useState('');
@@ -171,7 +201,6 @@
         localStorage.setItem('tct_transactions_v2', JSON.stringify(transactions));
       }, [transactions]);
 
-      // รีเซ็ตการกางกล่องเดือน เมื่อเปลี่ยนแท็บประวัติ
       useEffect(() => {
         setExpandedMonth(null);
       }, [historyFilter]);
@@ -193,9 +222,6 @@
       const remainingQuota = Math.min(theoreticalRemainingDaily, remainingMonthlyQuota);
       const maxPurchasingPower = remainingQuota / 0.60;
 
-      // ==========================================
-      // 1. เครื่องคิดเลขหลัก
-      // ==========================================
       useEffect(() => {
         const parsedValue = parseFloat(inputValue);
         if (!inputValue || isNaN(parsedValue) || parsedValue <= 0) {
@@ -228,9 +254,6 @@
         setCalcResult({ userPays: uPays, govtPays: gPays, totalValue: tValue, isMaxReached: isMax, quotaPercent: qPercent });
       }, [inputValue, activeTab]); 
 
-      // ==========================================
-      // 2. หน้าต่างบันทึกยอด
-      // ==========================================
       const selectedDateTimeObj = getSafeDateObj(selectedDate, selectedTime);
       const selectedQuotaDateStr = getQuotaDateString(selectedDateTimeObj);
       const selectedQuotaMonthStr = selectedQuotaDateStr.substring(0, 7);
@@ -256,7 +279,6 @@
         saveUserPaysPreview = saveTotalValuePreview - saveGovtPaysPreview;
       }
 
-      // --- Handlers ---
       const handleInputChange = (e) => {
         const val = e.target.value.replace(/[^0-9.]/g, '');
         if ((val.match(/\./g) || []).length > 1) return;
@@ -328,7 +350,6 @@
         setShowSaveModal(true);
       };
 
-      // --- ระบบจัดกลุ่มประวัติ ---
       const filteredTransactions = transactions.filter(t => {
         if (!t.quotaDate) return false;
         if (historyFilter === 'today') return t.quotaDate === currentQuotaDateStr;
@@ -336,7 +357,6 @@
         return true; 
       });
 
-      // ฟังก์ชันสำหรับจัดกลุ่ม
       const renderHistoryList = () => {
         if (filteredTransactions.length === 0) {
           return (
@@ -347,7 +367,6 @@
           );
         }
 
-        // กรณี "วันนี้" โชว์ลิสต์ยาวปกติ
         if (historyFilter === 'today') {
            return (
              <div className="space-y-2">
@@ -373,7 +392,6 @@
            );
         }
 
-        // กรณี "เดือนนี้" โชว์แยกเป็นวันๆ
         if (historyFilter === 'month') {
            const daysObj = {};
            filteredTransactions.forEach(tx => {
@@ -415,7 +433,6 @@
            );
         }
 
-        // กรณี "ทั้งหมด" โชว์เป็นกล่องรายเดือน พอกดค่อยกางออกเป็นรายวัน
         if (historyFilter === 'all') {
            const monthsObj = {};
            filteredTransactions.forEach(tx => {
@@ -432,7 +449,6 @@
                    const monthGovt = monthTxs.reduce((s,t) => s + (t.govtPays||0), 0);
                    const isExpanded = expandedMonth === monthKey;
                    
-                   // จับกลุ่มรายวันในเดือนนั้นๆ (ถ้ากางอยู่)
                    const daysInMonth = {};
                    if (isExpanded) {
                      monthTxs.forEach(tx => {
@@ -463,7 +479,6 @@
                          </div>
                        </button>
 
-                       {/* ส่วนที่กางออกแสดงรายวัน */}
                        {isExpanded && (
                          <div className="p-3 bg-white space-y-4 border-t border-gray-100">
                             {sortedDaysInMonth.map(dayKey => (
@@ -506,7 +521,6 @@
       return (
         <div className="flex justify-center items-center h-[100dvh] w-full select-none overflow-hidden relative">
           
-          {/* Toast Notification */}
           {showToast && (
             <div className="absolute top-12 left-0 right-0 z-[60] flex justify-center animate-slide-down px-4 pointer-events-none">
               <div className="bg-gray-800/95 backdrop-blur-md text-white px-6 py-3.5 rounded-full shadow-2xl flex items-center justify-center gap-3 w-auto max-w-[90%] border border-gray-700/50">
@@ -518,7 +532,6 @@
 
           <div className="w-full max-w-[420px] h-[100dvh] sm:h-[100dvh] sm:max-h-[850px] bg-gray-50 flex flex-col sm:rounded-[2.5rem] sm:border-[8px] sm:border-gray-900 shadow-2xl relative overflow-hidden">
             
-            {/* Header & Dashboard */}
             <div className="shrink-0 pt-3 sm:pt-4 pb-2.5 px-4 bg-white border-b border-gray-100 flex flex-col items-center justify-center relative z-10">
               
               <button onClick={() => setShowHistory(true)} className="absolute top-4 sm:top-5 right-4 px-2.5 py-1.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition active:scale-95 border border-gray-200 shadow-sm z-20 flex items-center gap-1">
@@ -566,7 +579,6 @@
               </div>
             </div>
 
-            {/* Middle Content */}
             <div className="flex-1 flex flex-col px-4 py-2 justify-between overflow-hidden relative">
               <div className="shrink-0 flex rounded-lg bg-gray-200/80 p-1 mb-2">
                 <button onClick={() => changeTab('budget')} className={`flex-1 flex flex-col items-center justify-center py-1.5 gap-1 rounded-md transition-all ${getTabColor('budget')}`}>
@@ -634,7 +646,6 @@
               </div>
             </div>
 
-            {/* Bottom Action Bar */}
             <div className="shrink-0 bg-white border-t-2 border-gray-100 px-4 pt-2.5 pb-safe z-10 shadow-[0_-10px_20px_rgba(0,0,0,0.02)]">
               <div className="flex items-center justify-between gap-3 min-h-[50px] sm:min-h-[55px]">
                 <div className="flex flex-col">
@@ -656,7 +667,6 @@
               </div>
             </div>
 
-            {/* Modal: บันทึกยอด */}
             {showSaveModal && (
               <div className="absolute inset-0 z-40 flex flex-col justify-end animate-fade-in bg-black/40 backdrop-blur-sm">
                 <div className="flex-1" onClick={() => setShowSaveModal(false)}></div>
@@ -710,7 +720,6 @@
               </div>
             )}
 
-            {/* Modal: ประวัติจัดกลุ่มแยกวัน/เดือน */}
             {showHistory && (
               <div className="absolute inset-0 z-50 flex flex-col bg-gray-50 animate-slide-up">
                 <div className="pt-10 sm:pt-12 pb-3 px-4 bg-white border-b border-gray-200 flex justify-between items-center shadow-sm">
