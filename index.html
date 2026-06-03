@@ -3,40 +3,39 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>ไทยช่วยไทยพลัส</title>
+  <title>ไทยช่วยไทยพลัส Pro</title>
   
-  <!-- 1. Web Manifest (เปลี่ยนใช้รูปล่าสุดสำหรับไอคอนแอป) -->
   <link rel="manifest" href='data:application/manifest+json,{"name":"ไทยช่วยไทยพลัส","short_name":"ไทยช่วยไทย","start_url":".","display":"standalone","background_color":"#f9fafb","theme_color":"#ffffff","icons":[{"src":"https://img1.pic.in.th/images/-83_20260603112901.png","sizes":"512x512","type":"image/png","purpose":"any maskable"},{"src":"https://img1.pic.in.th/images/-83_20260603112901.png","sizes":"192x192","type":"image/png","purpose":"any maskable"}]}'>
-
-  <!-- 2. ตั้งค่าไอคอนสำหรับ iOS และ Browser (เปลี่ยนใช้รูปล่าสุด) -->
   <link rel="icon" type="image/png" href="https://img1.pic.in.th/images/-83_20260603112901.png">
   <link rel="apple-touch-icon" href="https://img1.pic.in.th/images/-83_20260603112901.png">
   
-  <!-- 3. ตั้งค่าการแสดงผลบนมือถือ -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="ไทยช่วยไทย">
-  <!-- สีของแถบด้านบนสำหรับ Android -->
   <meta name="theme-color" content="#ffffff">
   
   <script src="https://cdn.tailwindcss.com"></script>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
   
   <style>
-    /* ป้องกันการเลื่อนจอทุกกรณี */
     html, body {
       overflow: hidden;
       overscroll-behavior-y: none;
       -webkit-tap-highlight-color: transparent;
       touch-action: manipulation;
     }
-    /* จัดการแถบด้านล่างของ iPhone ให้สวยงาม */
-    .pb-safe {
-      padding-bottom: env(safe-area-inset-bottom, 1rem);
-    }
+    .pb-safe { padding-bottom: env(safe-area-inset-bottom, 1rem); }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    
+    @keyframes slideDown { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    .animate-slide-down { animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    .animate-slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
   </style>
 </head>
 <body class="bg-gray-200 text-gray-900">
@@ -45,79 +44,174 @@
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
+    // --- ไอคอนต่างๆ ---
+    const Icons = {
+      Wallet: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>,
+      Tag: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42l-8.704-8.704z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></svg>,
+      Target: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,
+      X: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>,
+      History: () => <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+      Trash: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>,
+      Check: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>,
+      Save: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>,
+      Pen: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>,
+      AlertCircle: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    };
+
+    const getQuotaDateString = () => {
+      const now = new Date();
+      const hour = now.getHours();
+      const minute = now.getMinutes();
+      const effectiveDate = new Date(now);
+      if (hour > 23 || (hour === 23 && minute >= 1)) {
+        effectiveDate.setDate(effectiveDate.getDate() + 1);
+      }
+      const yyyy = effectiveDate.getFullYear();
+      const mm = String(effectiveDate.getMonth() + 1).padStart(2, '0');
+      const dd = String(effectiveDate.getDate()).padStart(2, '0');
+      return `${yyyy}-${mm}-${dd}`;
+    };
+
+    const formatDisplayTime = (isoString) => {
+      const d = new Date(isoString);
+      return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} น.`;
+    };
+
+    const formatNumber = (num) => {
+      if (isNaN(num) || num === null || num === undefined) return '0';
+      return Number(num).toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    };
+
     function App() {
+      // 1. States สำหรับเครื่องคิดเลขหลัก
       const [activeTab, setActiveTab] = useState('budget');
       const [inputValue, setInputValue] = useState('');
       const inputRef = useRef(null);
       
-      const [result, setResult] = useState({
+      const [calcResult, setCalcResult] = useState({
         userPays: 0,
         govtPays: 0,
         totalValue: 0,
         isMaxReached: false,
-        quotaPercent: 0,
+        quotaPercent: 0
+      });
+      
+      // 2. States สำหรับ UI และ Modal
+      const [showHistory, setShowHistory] = useState(false);
+      const [showToast, setShowToast] = useState(false);
+      const [toastMsg, setToastMsg] = useState('');
+      
+      const [showSaveModal, setShowSaveModal] = useState(false);
+      const [saveInputValue, setSaveInputValue] = useState('');
+      const saveInputRef = useRef(null);
+      
+      // 3. States สำหรับประวัติและการตั้งค่า
+      const [transactions, setTransactions] = useState(() => {
+        try {
+          const saved = localStorage.getItem('tct_transactions_v2');
+          return saved ? JSON.parse(saved) : [];
+        } catch(e) {
+          return [];
+        }
       });
 
+      const [currentQuotaDate, setCurrentQuotaDate] = useState(getQuotaDateString());
       const MAX_GOVT_SUBSIDY = 200;
+      const paotangDeepLink = "paotang://gwallet"; 
 
       useEffect(() => {
-        lucide.createIcons();
-      });
+        const timer = setInterval(() => {
+          const newQuotaDate = getQuotaDateString();
+          if (newQuotaDate !== currentQuotaDate) setCurrentQuotaDate(newQuotaDate);
+        }, 10000);
+        return () => clearInterval(timer);
+      }, [currentQuotaDate]);
 
       useEffect(() => {
-        calculate();
-      }, [inputValue, activeTab]);
+        localStorage.setItem('tct_transactions_v2', JSON.stringify(transactions));
+      }, [transactions]);
 
-      const calculate = () => {
-        if (!inputValue) {
-          setResult({ userPays: 0, govtPays: 0, totalValue: 0, isMaxReached: false, quotaPercent: 0 });
+      useEffect(() => {
+        if (showSaveModal && saveInputRef.current) {
+          setTimeout(() => saveInputRef.current.focus(), 100);
+        }
+      }, [showSaveModal]);
+
+      // --- ข้อมูล Dashboard ส่วนบน (บันทึกยอดจริง) ---
+      const todaysTransactions = transactions.filter(t => t.quotaDate === currentQuotaDate);
+      const usedQuotaToday = todaysTransactions.reduce((sum, t) => sum + t.govtPays, 0);
+      const remainingQuota = Math.max(0, MAX_GOVT_SUBSIDY - usedQuotaToday);
+      const maxPurchasingPower = remainingQuota / 0.60;
+
+      // ==========================================
+      // 1. เครื่องคิดเลขหลัก (คำนวณแยกอิสระ)
+      // ==========================================
+      useEffect(() => {
+        const parsedValue = parseFloat(inputValue);
+        
+        if (!inputValue || isNaN(parsedValue) || parsedValue <= 0) {
+          setCalcResult({ userPays: 0, govtPays: 0, totalValue: 0, isMaxReached: false, quotaPercent: 0 });
           return;
         }
 
-        const value = parseFloat(inputValue);
-        if (isNaN(value) || value <= 0) {
-          setResult({ userPays: 0, govtPays: 0, totalValue: 0, isMaxReached: false, quotaPercent: 0 });
-          return;
-        }
-
-        let actualGovtPays = 0;
-        let userPays = 0;
-        let totalValue = 0;
+        let gPays = 0;
+        let uPays = 0;
+        let tValue = 0;
         let isMax = false;
 
+        // คำนวณแบบเพียวๆ โดยถือว่าโควตาสูงสุดคือ 200 บาท
         if (activeTab === 'budget') {
-          const theoreticalGovtPays = value * 1.5; 
-          actualGovtPays = Math.min(theoreticalGovtPays, MAX_GOVT_SUBSIDY);
-          totalValue = value + actualGovtPays;
-          userPays = value;
-          isMax = theoreticalGovtPays > MAX_GOVT_SUBSIDY;
-
+          const theoretical = parsedValue * 1.5; 
+          gPays = Math.min(theoretical, MAX_GOVT_SUBSIDY);
+          tValue = parsedValue + gPays;
+          uPays = parsedValue;
+          isMax = theoretical > MAX_GOVT_SUBSIDY;
         } else if (activeTab === 'price') {
-          const theoreticalGovtPays = value * 0.60;
-          actualGovtPays = Math.min(theoreticalGovtPays, MAX_GOVT_SUBSIDY);
-          userPays = value - actualGovtPays;
-          totalValue = value;
-          isMax = theoreticalGovtPays > MAX_GOVT_SUBSIDY;
-
+          const theoretical = parsedValue * 0.60;
+          gPays = Math.min(theoretical, MAX_GOVT_SUBSIDY);
+          uPays = parsedValue - gPays;
+          tValue = parsedValue;
+          isMax = theoretical > MAX_GOVT_SUBSIDY;
         } else if (activeTab === 'quota') {
-          actualGovtPays = Math.min(value, MAX_GOVT_SUBSIDY);
-          totalValue = actualGovtPays / 0.60;
-          userPays = totalValue - actualGovtPays;
-          isMax = value >= MAX_GOVT_SUBSIDY;
+          gPays = Math.min(parsedValue, MAX_GOVT_SUBSIDY);
+          tValue = gPays / 0.60;
+          uPays = tValue - gPays;
+          isMax = parsedValue >= MAX_GOVT_SUBSIDY;
         }
 
-        setResult({
-          userPays,
-          govtPays: actualGovtPays,
-          totalValue,
-          isMaxReached: isMax,
-          quotaPercent: Math.min((actualGovtPays / MAX_GOVT_SUBSIDY) * 100, 100)
-        });
-      };
+        const qPercent = Math.min((gPays / MAX_GOVT_SUBSIDY) * 100, 100);
 
+        setCalcResult({
+          userPays: uPays,
+          govtPays: gPays,
+          totalValue: tValue,
+          isMaxReached: isMax,
+          quotaPercent: qPercent
+        });
+      }, [inputValue, activeTab]); 
+
+      // ==========================================
+      // 2. หน้าต่างบันทึกยอด (คำนวณหักจากสิทธิคงเหลือจริง)
+      // ==========================================
+      let saveGovtPaysPreview = 0;
+      let saveUserPaysPreview = 0;
+      let saveTotalValuePreview = parseFloat(saveInputValue) || 0;
+
+      if (saveTotalValuePreview > 0) {
+        const theoretical = saveTotalValuePreview * 0.60;
+        saveGovtPaysPreview = Math.min(theoretical, remainingQuota);
+        saveUserPaysPreview = saveTotalValuePreview - saveGovtPaysPreview;
+      }
+
+      // --- Handlers ---
       const handleInputChange = (e) => {
         const val = e.target.value.replace(/[^0-9.]/g, '');
         if ((val.match(/\./g) || []).length <= 1) setInputValue(val);
+      };
+
+      const handleSaveInputChange = (e) => {
+        const val = e.target.value.replace(/[^0-9.]/g, '');
+        if ((val.match(/\./g) || []).length <= 1) setSaveInputValue(val);
       };
 
       const clearInput = () => {
@@ -130,50 +224,127 @@
         setInputValue('');
       };
 
-      const formatNumber = (num) => num.toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+      const confirmSaveTransaction = () => {
+        if (!saveInputValue || saveTotalValuePreview <= 0) return;
+
+        const newTx = {
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
+          quotaDate: currentQuotaDate,
+          timestamp: new Date().toISOString(),
+          userPays: saveUserPaysPreview,
+          govtPays: saveGovtPaysPreview,
+          totalValue: saveTotalValuePreview,
+          inputType: 'manual_save'
+        };
+
+        setTransactions(prev => [newTx, ...prev]);
+        setShowSaveModal(false);
+        setSaveInputValue('');
+        
+        setToastMsg(`บันทึกยอด ${formatNumber(saveTotalValuePreview)} บ. สำเร็จ!`);
+        setShowToast(true);
+        setTimeout(() => setShowToast(false), 2500);
+      };
+
+      const handleDelete = (id) => {
+        setTransactions(prev => prev.filter(t => t.id !== id));
+      };
 
       const getTabColor = (tabId) => {
         if (activeTab !== tabId) return 'text-gray-500 hover:text-gray-600 bg-transparent';
         switch (tabId) {
           case 'budget': return 'bg-blue-600 text-white shadow-sm';
           case 'price': return 'bg-gray-800 text-white shadow-sm';
-          case 'quota': return 'bg-green-600 text-white shadow-sm';
+          case 'quota': return 'bg-emerald-600 text-white shadow-sm';
           default: return 'bg-white text-gray-800';
         }
       };
 
-      const paotangDeepLink = "paotang://gwallet"; 
+      // แยกกัน 100% ไม่ดึงตัวเลขจากเครื่องคิดเลขมาเติมให้
+      const openSaveModal = () => {
+        setSaveInputValue('');
+        setShowSaveModal(true);
+      };
 
       return (
-        <div className="flex justify-center items-center h-[100dvh] w-full select-none overflow-hidden">
-          {/* Main App Container */}
+        <div className="flex justify-center items-center h-[100dvh] w-full select-none overflow-hidden relative">
+          
+          {/* Toast Notification (แถบแจ้งเตือนที่ปรับแล้ว) */}
+          {showToast && (
+            <div className="absolute top-12 left-0 right-0 z-[60] flex justify-center animate-slide-down px-4 pointer-events-none">
+              <div className="bg-gray-800/95 backdrop-blur-md text-white px-5 py-3.5 rounded-2xl shadow-xl flex items-center justify-center gap-3 min-w-[200px] max-w-sm border border-gray-700/50">
+                <div className="bg-emerald-500 rounded-full p-1 flex-shrink-0 text-white shadow-sm">
+                  <Icons.Check />
+                </div>
+                <span className="text-sm font-bold tracking-wide pr-1">{toastMsg}</span>
+              </div>
+            </div>
+          )}
+
           <div className="w-full max-w-[420px] h-[100dvh] sm:h-[100dvh] sm:max-h-[850px] bg-gray-50 flex flex-col sm:rounded-[2.5rem] sm:border-[8px] sm:border-gray-900 shadow-2xl relative overflow-hidden">
             
-            {/* Header (ใช้โลโก้แนวนอนอันเดิม) */}
-            <div className="shrink-0 pt-6 sm:pt-8 pb-3 px-4 bg-white border-b border-gray-100 flex flex-col items-center justify-center z-10">
+            {/* Header & Dashboard */}
+            <div className="shrink-0 pt-4 sm:pt-6 pb-4 px-5 bg-white border-b border-gray-100 flex flex-col items-center justify-center relative z-10">
+              
+              {/* History Button (ปุ่มนาฬิกากลับมาอยู่มุมขวาบนอย่างถูกต้อง) */}
+              <button onClick={() => setShowHistory(true)} className="absolute top-4 sm:top-6 right-5 p-2 bg-gray-100 text-gray-500 rounded-full hover:bg-gray-200 transition active:scale-95">
+                <Icons.History />
+                {todaysTransactions.length > 0 && (
+                  <span className="absolute top-[2px] right-[2px] w-3 h-3 bg-red-500 border-2 border-white rounded-full"></span>
+                )}
+              </button>
+
               <img 
                 src="https://media.thaigov.go.th/l3qDHmrj2DNjiur-keUFOlaI2fk=/https://www.thaigov.go.th/uploads/images/275/2026/05/png/20260526091533_3759.png" 
                 alt="โลโก้ ไทยช่วยไทยพลัส" 
-                className="h-10 sm:h-14 w-auto object-contain"
+                className="h-9 sm:h-12 w-auto object-contain mb-3"
               />
-              <p className="text-[11px] sm:text-xs font-bold text-gray-400 mt-1 tracking-wide">สัดส่วน 60/40 (รัฐช่วยสูงสุด 200 บ./วัน)</p>
+              
+              <div className="w-full flex gap-2">
+                <div className="flex-1 bg-emerald-50 rounded-xl p-3 border border-emerald-100/50">
+                  <div className="flex justify-between items-end mb-1.5">
+                    <span className="text-[11px] font-bold text-emerald-800">สิทธิคงเหลือวันนี้</span>
+                    <span className="text-sm font-black text-emerald-600">{formatNumber(remainingQuota)} / 200 ฿</span>
+                  </div>
+                  <div className="w-full bg-emerald-200/50 h-2 rounded-full overflow-hidden mb-1.5">
+                    <div className="h-full bg-emerald-500 transition-all duration-500 rounded-full" style={{ width: `${(usedQuotaToday / MAX_GOVT_SUBSIDY) * 100}%` }}></div>
+                  </div>
+                  <p className="text-[10px] font-semibold text-emerald-700 text-center">
+                    ใช้จ่ายได้อีกสูงสุด <span className="text-emerald-900 font-bold">{formatNumber(maxPurchasingPower)} ฿</span>
+                  </p>
+                </div>
+
+                <button 
+                  onClick={openSaveModal}
+                  disabled={remainingQuota === 0}
+                  className={`shrink-0 w-[72px] rounded-xl flex flex-col items-center justify-center transition-all border ${
+                    remainingQuota > 0
+                      ? 'bg-gradient-to-b from-blue-500 to-blue-600 border-blue-700 text-white shadow-md active:scale-95' 
+                      : 'bg-gray-100 border-gray-200 text-gray-400 pointer-events-none'
+                  }`}
+                >
+                  <Icons.Pen />
+                  <span className="text-[11px] font-bold mt-1">จดบันทึก</span>
+                </button>
+              </div>
+
             </div>
 
-            {/* Content Area */}
-            <div className="flex-1 flex flex-col px-4 py-3 justify-evenly overflow-hidden">
-              
+            {/* Middle Content */}
+            <div className="flex-1 flex flex-col px-4 py-3 justify-evenly overflow-hidden relative">
+
               {/* Tabs */}
               <div className="shrink-0 flex rounded-xl bg-gray-200/80 p-1">
                 <button onClick={() => changeTab('budget')} className={`flex-1 flex flex-col items-center justify-center py-2 sm:py-2.5 gap-1 rounded-lg transition-all ${getTabColor('budget')}`}>
-                  <i data-lucide="wallet" className="w-4 h-4 sm:w-5 sm:h-5"></i>
-                  <span className="text-[10px] sm:text-[11px] font-bold">มีเงินจ่าย</span>
+                  <Icons.Wallet />
+                  <span className="text-[10px] sm:text-[11px] font-bold">จำนวนเงิน</span>
                 </button>
                 <button onClick={() => changeTab('price')} className={`flex-1 flex flex-col items-center justify-center py-2 sm:py-2.5 gap-1 rounded-lg transition-all ${getTabColor('price')}`}>
-                  <i data-lucide="tag" className="w-4 h-4 sm:w-5 sm:h-5"></i>
+                  <Icons.Tag />
                   <span className="text-[10px] sm:text-[11px] font-bold">ราคาสินค้า</span>
                 </button>
                 <button onClick={() => changeTab('quota')} className={`flex-1 flex flex-col items-center justify-center py-2 sm:py-2.5 gap-1 rounded-lg transition-all ${getTabColor('quota')}`}>
-                  <i data-lucide="target" className="w-4 h-4 sm:w-5 sm:h-5"></i>
+                  <Icons.Target />
                   <span className="text-[10px] sm:text-[11px] font-bold">สิทธิที่เหลือ</span>
                 </button>
               </div>
@@ -199,22 +370,22 @@
                   />
                   {inputValue && (
                     <button onClick={clearInput} className="absolute right-4 bg-gray-100 hover:bg-gray-200 text-gray-500 rounded-full p-1.5 transition-colors">
-                      <i data-lucide="x" className="w-4 h-4"></i>
+                      <Icons.X />
                     </button>
                   )}
                 </div>
               </div>
 
               {/* Receipt Card */}
-              <div className="shrink-0 bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-100 mt-2 sm:mt-3">
-                <div className="space-y-3 sm:space-y-4">
+              <div className="shrink-0 bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-100 mt-2 sm:mt-3 opacity-90">
+                <div className="space-y-2.5 sm:space-y-3">
                   
                   <div className="flex justify-between items-center bg-blue-50/50 p-2.5 sm:p-3 rounded-xl border border-blue-100/50">
                     <div className="flex flex-col">
                       <span className="text-xs sm:text-sm font-bold text-blue-900">1. เราจ่ายเอง (40%)</span>
                       <span className="text-[10px] sm:text-xs text-blue-500 font-medium">หักจากแอปเป๋าตัง</span>
                     </div>
-                    <span className={`text-lg sm:text-xl font-black ${inputValue ? 'text-blue-600' : 'text-blue-300'}`}>{formatNumber(result.userPays)}</span>
+                    <span className={`text-lg sm:text-xl font-black ${inputValue ? 'text-blue-600' : 'text-blue-300'}`}>{formatNumber(calcResult.userPays)}</span>
                   </div>
 
                   <div className="flex justify-between items-center bg-green-50/50 p-2.5 sm:p-3 rounded-xl border border-green-100/50">
@@ -222,26 +393,25 @@
                       <span className="text-xs sm:text-sm font-bold text-green-900">2. รัฐช่วยจ่าย (60%)</span>
                       <span className="text-[10px] sm:text-xs text-green-500 font-medium">ใช้โควตารายวัน</span>
                     </div>
-                    <span className={`text-lg sm:text-xl font-black ${inputValue ? 'text-green-600' : 'text-green-300'}`}>+{formatNumber(result.govtPays)}</span>
+                    <span className={`text-lg sm:text-xl font-black ${inputValue ? 'text-green-600' : 'text-green-300'}`}>+{formatNumber(calcResult.govtPays)}</span>
                   </div>
 
-                  <div className="border-t-2 border-gray-100 my-1"></div>
+                  <div className="border-t-2 border-dashed border-gray-100 my-1"></div>
 
                   <div className="flex justify-between items-end pt-1">
-                    <span className="text-sm sm:text-base font-extrabold text-gray-800">รวมได้สินค้ามูลค่า</span>
-                    <span className={`text-2xl sm:text-3xl font-black ${inputValue ? 'text-gray-800' : 'text-gray-300'}`}>฿ {formatNumber(result.totalValue)}</span>
+                    <span className="text-sm sm:text-base font-extrabold text-gray-800">จำนวนเงินรวม</span>
+                    <span className={`text-2xl sm:text-3xl font-black ${inputValue ? 'text-gray-800' : 'text-gray-300'}`}>฿ {formatNumber(calcResult.totalValue)}</span>
                   </div>
                   
-                  {/* Progress bar */}
-                  <div className="pt-2 sm:pt-3">
+                  <div className="pt-2 sm:pt-3 border-t border-gray-100 mt-2">
                     <div className="flex justify-between text-[10px] font-bold text-gray-400 mb-1.5">
-                      <span>โควตารัฐวันนี้ (200 บ.)</span>
-                      <span className={result.isMaxReached ? 'text-orange-500' : (inputValue ? 'text-green-500' : 'text-gray-300')}>
-                        {result.isMaxReached ? 'ใช้เต็ม 200 บ.' : `ใช้ไป ${formatNumber(result.govtPays)} บ.`}
+                      <span>ใช้โควตารัฐ (200 บ.)</span>
+                      <span className={calcResult.isMaxReached ? 'text-orange-500' : (inputValue ? 'text-green-500' : 'text-gray-300')}>
+                        {calcResult.isMaxReached ? 'เต็ม 200 ฿' : `${formatNumber(calcResult.govtPays)} / 200 ฿`}
                       </span>
                     </div>
-                    <div className="w-full bg-gray-100 h-2.5 rounded-full overflow-hidden">
-                      <div className={`h-full transition-all duration-300 ${!inputValue ? 'bg-transparent' : (result.isMaxReached ? 'bg-orange-400' : 'bg-green-400')}`} style={{ width: `${result.quotaPercent}%` }}></div>
+                    <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                      <div className={`h-full transition-all duration-300 ${!inputValue ? 'bg-transparent' : (calcResult.isMaxReached ? 'bg-orange-400' : 'bg-green-400')}`} style={{ width: `${calcResult.quotaPercent}%` }}></div>
                     </div>
                   </div>
 
@@ -249,16 +419,16 @@
               </div>
 
               {/* Warning Area */}
-              <div className="shrink-0 h-[56px] sm:h-[64px] mt-2 sm:mt-3 relative">
-                {result.isMaxReached && (
+              <div className="shrink-0 h-[48px] sm:h-[56px] mt-2 relative">
+                {calcResult.isMaxReached && (
                    <div className="absolute inset-0 flex items-center gap-3 p-3 bg-orange-50 rounded-xl border border-orange-200">
-                     <i data-lucide="alert-circle" className="text-orange-500 flex-shrink-0 w-5 h-5"></i>
+                     <Icons.AlertCircle className="text-orange-500 flex-shrink-0 w-5 h-5" />
                      <div>
                         <p className="text-[11px] sm:text-xs font-bold text-orange-900 leading-tight">แจ้งเตือนโควตาเต็ม</p>
                         <p className="text-[10px] sm:text-[11px] text-orange-700 font-medium leading-tight mt-0.5">
                           {activeTab === 'quota' && parseFloat(inputValue) > 200 
-                            ? 'ระบบคำนวณจากยอดสูงสุดที่ 200 บาทให้แล้ว'
-                            : 'ส่วนเกินจากโควตา 200 บาท คุณจะต้องจ่ายเองทั้งหมด'}
+                            ? 'โควตารัฐสูงสุดต่อวันคือ 200 บาท ระบบคำนวณจากยอดสูงสุดให้แล้วครับ'
+                            : 'ยอดเกินขีดจำกัดรัฐช่วย 200 บาท/วัน ส่วนที่เกินนี้คุณจะต้องเป็นผู้จ่ายเองทั้งหมด'}
                         </p>
                      </div>
                    </div>
@@ -267,31 +437,155 @@
 
             </div>
 
-            {/* 3. Bottom Action Bar */}
+            {/* Bottom Action Bar */}
             <div className="shrink-0 bg-white border-t-2 border-gray-100 px-5 pt-3 pb-safe z-10 shadow-[0_-10px_20px_rgba(0,0,0,0.02)]">
               <div className="flex items-center justify-between gap-3 min-h-[60px] sm:min-h-[70px]">
                 <div className="flex flex-col">
                   <span className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wide mb-0.5">
-                    {activeTab === 'budget' && 'ได้ของมูลค่ารวม'}
-                    {activeTab === 'price' && 'เตรียมเงินแสกนจ่าย'}
-                    {activeTab === 'quota' && 'ซื้อของได้สูงสุด'}
+                    {activeTab === 'budget' && 'ใช้จ่ายได้ทั้งหมด'}
+                    {activeTab === 'price' && 'จำนวนเงินที่ต้องจ่ายเอง'}
+                    {activeTab === 'quota' && 'ใช้จ่ายได้สูงสุด'}
                   </span>
                   <div className="flex items-baseline">
                     <span className={`text-xl font-bold mr-1 ${inputValue ? 'text-gray-800' : 'text-gray-300'}`}>฿</span>
                     <span className={`text-3xl sm:text-4xl font-black tracking-tight ${inputValue ? (activeTab === 'price' ? 'text-blue-600' : 'text-gray-800') : 'text-gray-300'}`}>
-                      {inputValue ? (activeTab === 'price' ? formatNumber(result.userPays) : formatNumber(result.totalValue)) : '0'}
+                      {inputValue ? (activeTab === 'price' ? formatNumber(calcResult.userPays) : formatNumber(calcResult.totalValue)) : '0'}
                     </span>
                   </div>
                 </div>
                 
                 <a 
-                  href={inputValue ? paotangDeepLink : "#"}
-                  className={`h-12 sm:h-14 px-4 sm:px-6 rounded-2xl flex items-center justify-center transition-all ${inputValue && !result.isMaxReached ? 'bg-green-500 text-white shadow-lg shadow-green-200/50 hover:bg-green-600 active:scale-95' : (inputValue && result.isMaxReached ? 'bg-orange-500 text-white shadow-lg shadow-orange-200/50 hover:bg-orange-600 active:scale-95' : 'bg-gray-100 text-gray-400 pointer-events-none')}`}
+                  href={paotangDeepLink}
+                  className="h-12 sm:h-14 px-4 sm:px-5 rounded-2xl flex items-center justify-center transition-all bg-gray-800 text-white hover:bg-gray-700 active:scale-95"
                 >
-                  <span className="text-sm sm:text-base font-bold whitespace-nowrap">ใช้สิทธิ์เลย</span>
+                  <span className="text-sm sm:text-base font-bold whitespace-nowrap">เปิดแอปเป๋าตัง</span>
                 </a>
               </div>
             </div>
+
+            {/* Modal: หน้าต่างบันทึกยอด */}
+            {showSaveModal && (
+              <div className="absolute inset-0 z-40 flex flex-col justify-end animate-fade-in bg-black/40 backdrop-blur-sm">
+                
+                <div className="flex-1" onClick={() => setShowSaveModal(false)}></div>
+                
+                <div className="bg-white w-full rounded-t-[2rem] pt-6 pb-safe px-5 shadow-2xl animate-slide-up flex flex-col">
+                  
+                  <div className="flex justify-between items-center mb-5">
+                    <div className="flex items-center gap-2 text-blue-600">
+                      <Icons.Pen />
+                      <h2 className="text-xl font-black text-gray-800">บันทึกรายการใช้จ่าย</h2>
+                    </div>
+                    <button onClick={() => setShowSaveModal(false)} className="p-2 bg-gray-100 rounded-full text-gray-500 active:scale-95">
+                      <Icons.X />
+                    </button>
+                  </div>
+
+                  <p className="text-sm font-semibold text-gray-500 mb-2">มูลค่าการใช้จ่าย</p>
+                  
+                  <div className="bg-gray-50 border-2 border-blue-200 rounded-2xl p-4 flex items-center mb-6">
+                    <span className="text-2xl font-bold text-gray-400 mr-2">฿</span>
+                    <input
+                      ref={saveInputRef}
+                      type="text"
+                      inputMode="decimal"
+                      value={saveInputValue}
+                      onChange={handleSaveInputChange}
+                      className="w-full text-4xl font-black text-blue-700 bg-transparent focus:outline-none p-0"
+                      placeholder="0"
+                    />
+                  </div>
+
+                  <div className="bg-gray-50 rounded-xl p-4 mb-6 border border-gray-100 space-y-3">
+                     <div className="flex justify-between items-center">
+                        <span className="text-sm font-bold text-emerald-800">รัฐช่วยจ่าย (หักโควตา)</span>
+                        <span className={`text-lg font-black ${saveInputValue ? 'text-emerald-600' : 'text-gray-300'}`}>
+                          - {formatNumber(saveGovtPaysPreview)} ฿
+                        </span>
+                     </div>
+                     <div className="flex justify-between items-center">
+                        <span className="text-sm font-bold text-blue-800">คุณต้องจ่ายเอง (เป๋าตัง)</span>
+                        <span className={`text-lg font-black ${saveInputValue ? 'text-blue-600' : 'text-gray-300'}`}>
+                          - {formatNumber(saveUserPaysPreview)} ฿
+                        </span>
+                     </div>
+                  </div>
+
+                  <button 
+                    onClick={confirmSaveTransaction}
+                    disabled={!saveInputValue || saveTotalValuePreview <= 0}
+                    className={`h-14 w-full rounded-2xl flex items-center justify-center transition-all text-lg font-bold mb-2 ${
+                      saveInputValue && saveTotalValuePreview > 0
+                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30 active:scale-95' 
+                        : 'bg-gray-200 text-gray-400 pointer-events-none'
+                    }`}
+                  >
+                    บันทึก
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Modal: ประวัติการใช้งาน */}
+            {showHistory && (
+              <div className="absolute inset-0 z-50 flex flex-col bg-gray-50 animate-slide-up">
+                
+                <div className="pt-12 sm:pt-14 pb-4 px-5 bg-white border-b border-gray-200 flex justify-between items-center shadow-sm">
+                  <h2 className="text-xl font-black text-gray-800">ประวัติการใช้สิทธิวันนี้</h2>
+                  <button onClick={() => setShowHistory(false)} className="p-2 bg-gray-100 rounded-full text-gray-600 active:scale-95">
+                    <Icons.X />
+                  </button>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-5 pb-safe">
+                  
+                  <div className="bg-gray-800 rounded-2xl p-5 mb-6 text-white shadow-lg">
+                    <p className="text-sm font-medium text-gray-400 mb-1">ยอดรัฐช่วยจ่ายที่ใช้ไปแล้ววันนี้</p>
+                    <div className="flex items-baseline mb-4">
+                      <span className="text-4xl font-black text-emerald-400">{formatNumber(usedQuotaToday)}</span>
+                      <span className="ml-2 text-lg font-bold text-gray-400">/ 200 ฿</span>
+                    </div>
+                    <div className="flex justify-between text-xs font-semibold text-gray-300 border-t border-gray-700 pt-3">
+                      <span>ใช้เป๋าตังไปแล้ว: ฿{formatNumber(todaysTransactions.reduce((s,t) => s + t.userPays, 0))}</span>
+                      <span>จำนวนเงินรวม: ฿{formatNumber(todaysTransactions.reduce((s,t) => s + t.totalValue, 0))}</span>
+                    </div>
+                  </div>
+
+                  <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider mb-3">รายการวันนี้ ({todaysTransactions.length})</h3>
+                  
+                  {todaysTransactions.length === 0 ? (
+                    <div className="text-center py-10">
+                      <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-3 text-gray-400">
+                        <Icons.History />
+                      </div>
+                      <p className="text-gray-500 font-medium">ยังไม่มีการบันทึกรายการในวันนี้</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {todaysTransactions.map((tx) => (
+                        <div key={tx.id} className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-[10px] font-bold text-white bg-gray-800 px-2 py-0.5 rounded-md">
+                                {formatDisplayTime(tx.timestamp)}
+                              </span>
+                            </div>
+                            <p className="text-sm font-bold text-gray-800">จำนวนเงินรวม ฿{formatNumber(tx.totalValue)}</p>
+                            <p className="text-[11px] text-gray-500 font-medium">
+                              เป๋าตัง ฿{formatNumber(tx.userPays)} | รัฐช่วย <span className="text-emerald-600 font-bold">฿{formatNumber(tx.govtPays)}</span>
+                            </p>
+                          </div>
+                          <button onClick={() => handleDelete(tx.id)} className="p-3 text-red-500 hover:bg-red-50 rounded-xl transition active:scale-95" aria-label="ลบรายการ">
+                            <Icons.Trash />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                </div>
+              </div>
+            )}
 
           </div>
         </div>
