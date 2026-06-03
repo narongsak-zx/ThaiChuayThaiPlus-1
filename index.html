@@ -5,13 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>ไทยช่วยไทยพลัส</title>
   
-  <!-- 1. Web Manifest (อัปเดตให้รองรับ Android ได้ดีขึ้น) -->
-  <!-- เพิ่ม "purpose": "any maskable" เพื่อให้ Android นำรูปแนวนอนไปครอบให้เป็นไอคอนวงกลม/หยดน้ำ ได้ดีขึ้น -->
-  <link rel="manifest" href='data:application/manifest+json,{"name":"ไทยช่วยไทยพลัส","short_name":"ไทยช่วยไทย","start_url":".","display":"standalone","background_color":"#f9fafb","theme_color":"#ffffff","icons":[{"src":"https://media.thaigov.go.th/l3qDHmrj2DNjiur-keUFOlaI2fk=/https://www.thaigov.go.th/uploads/images/275/2026/05/png/20260526091533_3759.png","sizes":"512x512","type":"image/png","purpose":"any maskable"},{"src":"https://media.thaigov.go.th/l3qDHmrj2DNjiur-keUFOlaI2fk=/https://www.thaigov.go.th/uploads/images/275/2026/05/png/20260526091533_3759.png","sizes":"192x192","type":"image/png","purpose":"any maskable"}]}'>
+  <!-- 1. Web Manifest (เปลี่ยนใช้รูปล่าสุดสำหรับไอคอนแอป) -->
+  <link rel="manifest" href='data:application/manifest+json,{"name":"ไทยช่วยไทยพลัส","short_name":"ไทยช่วยไทย","start_url":".","display":"standalone","background_color":"#f9fafb","theme_color":"#ffffff","icons":[{"src":"https://img1.pic.in.th/images/-83_20260603112901.png","sizes":"512x512","type":"image/png","purpose":"any maskable"},{"src":"https://img1.pic.in.th/images/-83_20260603112901.png","sizes":"192x192","type":"image/png","purpose":"any maskable"}]}'>
 
-  <!-- 2. ตั้งค่าไอคอนทั่วไปและ iOS -->
-  <link rel="icon" type="image/png" href="https://media.thaigov.go.th/l3qDHmrj2DNjiur-keUFOlaI2fk=/https://www.thaigov.go.th/uploads/images/275/2026/05/png/20260526091533_3759.png">
-  <link rel="apple-touch-icon" href="https://media.thaigov.go.th/l3qDHmrj2DNjiur-keUFOlaI2fk=/https://www.thaigov.go.th/uploads/images/275/2026/05/png/20260526091533_3759.png">
+  <!-- 2. ตั้งค่าไอคอนสำหรับ iOS และ Browser (เปลี่ยนใช้รูปล่าสุด) -->
+  <link rel="icon" type="image/png" href="https://img1.pic.in.th/images/-83_20260603112901.png">
+  <link rel="apple-touch-icon" href="https://img1.pic.in.th/images/-83_20260603112901.png">
   
   <!-- 3. ตั้งค่าการแสดงผลบนมือถือ -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -150,7 +149,7 @@
           {/* Main App Container */}
           <div className="w-full max-w-[420px] h-[100dvh] sm:h-[100dvh] sm:max-h-[850px] bg-gray-50 flex flex-col sm:rounded-[2.5rem] sm:border-[8px] sm:border-gray-900 shadow-2xl relative overflow-hidden">
             
-            {/* Header */}
+            {/* Header (ใช้โลโก้แนวนอนอันเดิม) */}
             <div className="shrink-0 pt-6 sm:pt-8 pb-3 px-4 bg-white border-b border-gray-100 flex flex-col items-center justify-center z-10">
               <img 
                 src="https://media.thaigov.go.th/l3qDHmrj2DNjiur-keUFOlaI2fk=/https://www.thaigov.go.th/uploads/images/275/2026/05/png/20260526091533_3759.png" 
