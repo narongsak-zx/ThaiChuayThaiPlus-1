@@ -2,48 +2,38 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>ไทยช่วยไทยพลัส</title>
   
-  <!-- ตั้งค่าไอคอนสำหรับเพิ่มลงหน้าจอหลัก (Add to Home Screen) -->
+  <link rel="manifest" href='data:application/manifest+json,{"name":"ไทยช่วยไทยพลัส","short_name":"ไทยช่วยไทย","start_url":".","display":"standalone","background_color":"#f9fafb","theme_color":"#ffffff","icons":[{"src":"https://media.thaigov.go.th/l3qDHmrj2DNjiur-keUFOlaI2fk=/https://www.thaigov.go.th/uploads/images/275/2026/05/png/20260526091533_3759.png","sizes":"512x512","type":"image/png"}]}'>
   <link rel="icon" type="image/png" href="https://media.thaigov.go.th/l3qDHmrj2DNjiur-keUFOlaI2fk=/https://www.thaigov.go.th/uploads/images/275/2026/05/png/20260526091533_3759.png">
   <link rel="apple-touch-icon" href="https://media.thaigov.go.th/l3qDHmrj2DNjiur-keUFOlaI2fk=/https://www.thaigov.go.th/uploads/images/275/2026/05/png/20260526091533_3759.png">
   
-  <!-- ตั้งค่าให้ทำงานแบบ Fullscreen เหมือนแอปจริงๆ บน iOS -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="ไทยช่วยไทยพลัส">
+  <meta name="apple-mobile-web-app-title" content="ไทยช่วยไทย">
   
-  <!-- โหลด Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- โหลด React และ ReactDOM -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  
-  <!-- โหลด Babel สำหรับแปลง JSX -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-  <!-- โหลด Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
   
   <style>
-    /* ซ่อน Scrollbar */
-    .no-scrollbar::-webkit-scrollbar {
-      display: none;
-    }
-    .no-scrollbar {
-      -ms-overflow-style: none;
-      scrollbar-width: none;
-    }
-    /* ป้องกันการเด้งเวลา Scroll บน iOS */
-    body {
+    /* ป้องกันการเลื่อนจอทุกกรณี */
+    html, body {
+      overflow: hidden;
       overscroll-behavior-y: none;
       -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    /* จัดการแถบด้านล่างของ iPhone ให้สวยงาม */
+    .pb-safe {
+      padding-bottom: env(safe-area-inset-bottom, 1rem);
     }
   </style>
 </head>
-<body class="bg-gray-100">
+<body class="bg-gray-200 text-gray-900">
   <div id="root"></div>
 
   <script type="text/babel">
@@ -129,129 +119,138 @@
         inputRef.current?.focus();
       };
 
+      const changeTab = (tabId) => {
+        setActiveTab(tabId);
+        setInputValue('');
+      };
+
       const formatNumber = (num) => num.toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 
       const getTabColor = (tabId) => {
-        if (activeTab !== tabId) return 'text-gray-500 hover:text-gray-700 bg-transparent';
+        if (activeTab !== tabId) return 'text-gray-500 hover:text-gray-600 bg-transparent';
         switch (tabId) {
-          case 'budget': return 'bg-blue-600 text-white shadow-md';
-          case 'price': return 'bg-gray-800 text-white shadow-md';
-          case 'quota': return 'bg-green-600 text-white shadow-md';
+          case 'budget': return 'bg-blue-600 text-white shadow-sm';
+          case 'price': return 'bg-gray-800 text-white shadow-sm';
+          case 'quota': return 'bg-green-600 text-white shadow-sm';
           default: return 'bg-white text-gray-800';
         }
       };
 
       return (
-        <div className="min-h-screen bg-gray-100 flex items-center justify-center p-0 sm:p-4 font-sans antialiased">
-          <div className="bg-white w-full h-[100dvh] sm:h-[850px] sm:max-w-[400px] flex flex-col relative sm:rounded-[2.5rem] sm:border-[6px] border-gray-900 overflow-hidden shadow-2xl">
+        <div className="flex justify-center items-center h-[100dvh] w-full select-none overflow-hidden">
+          {/* Main App Container - Fits exactly to screen */}
+          <div className="w-full max-w-[420px] h-[100dvh] sm:h-[100dvh] sm:max-h-[850px] bg-gray-50 flex flex-col sm:rounded-[2.5rem] sm:border-[8px] sm:border-gray-900 shadow-2xl relative overflow-hidden">
             
-            {/* Header */}
-            <div className="pt-12 pb-4 px-6 bg-white border-b border-gray-100 shrink-0 flex flex-col items-center justify-center">
+            {/* 1. Header (Shrink to fit) */}
+            <div className="shrink-0 pt-6 sm:pt-8 pb-3 px-4 bg-white border-b border-gray-100 flex flex-col items-center justify-center z-10">
               <img 
                 src="https://media.thaigov.go.th/l3qDHmrj2DNjiur-keUFOlaI2fk=/https://www.thaigov.go.th/uploads/images/275/2026/05/png/20260526091533_3759.png" 
                 alt="โลโก้ ไทยช่วยไทยพลัส" 
-                className="h-16 sm:h-20 w-auto object-contain"
+                className="h-10 sm:h-14 w-auto object-contain"
               />
-              <p className="text-sm font-bold text-gray-500 text-center mt-1">สัดส่วน 60/40 (รัฐช่วยสูงสุด 200 บ./วัน)</p>
+              <p className="text-[11px] sm:text-xs font-bold text-gray-400 mt-1 tracking-wide">สัดส่วน 60/40 (รัฐช่วยสูงสุด 200 บ./วัน)</p>
             </div>
 
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto px-5 pt-6 pb-40 no-scrollbar bg-gray-50">
+            {/* 2. Middle Content Area (Flexible) */}
+            <div className="flex-1 flex flex-col px-4 py-3 justify-evenly overflow-hidden">
               
               {/* Tabs */}
-              <div className="flex rounded-xl bg-gray-200 p-1 mb-8 shadow-inner">
-                <button onClick={() => { setActiveTab('budget'); setInputValue(''); }} className={`flex-1 flex flex-col items-center justify-center py-3 gap-1.5 rounded-lg transition-all duration-200 ${getTabColor('budget')}`}>
-                  <i data-lucide="wallet" className="w-5 h-5"></i>
-                  <span className="text-[12px] font-bold tracking-wide">มีเงินจ่าย</span>
+              <div className="shrink-0 flex rounded-xl bg-gray-200/80 p-1">
+                <button onClick={() => changeTab('budget')} className={`flex-1 flex flex-col items-center justify-center py-2 sm:py-2.5 gap-1 rounded-lg transition-all ${getTabColor('budget')}`}>
+                  <i data-lucide="wallet" className="w-4 h-4 sm:w-5 sm:h-5"></i>
+                  <span className="text-[10px] sm:text-[11px] font-bold">มีเงินจ่าย</span>
                 </button>
-                <button onClick={() => { setActiveTab('price'); setInputValue(''); }} className={`flex-1 flex flex-col items-center justify-center py-3 gap-1.5 rounded-lg transition-all duration-200 ${getTabColor('price')}`}>
-                  <i data-lucide="tag" className="w-5 h-5"></i>
-                  <span className="text-[12px] font-bold tracking-wide">ราคาสินค้า</span>
+                <button onClick={() => changeTab('price')} className={`flex-1 flex flex-col items-center justify-center py-2 sm:py-2.5 gap-1 rounded-lg transition-all ${getTabColor('price')}`}>
+                  <i data-lucide="tag" className="w-4 h-4 sm:w-5 sm:h-5"></i>
+                  <span className="text-[10px] sm:text-[11px] font-bold">ราคาสินค้า</span>
                 </button>
-                <button onClick={() => { setActiveTab('quota'); setInputValue(''); }} className={`flex-1 flex flex-col items-center justify-center py-3 gap-1.5 rounded-lg transition-all duration-200 ${getTabColor('quota')}`}>
-                  <i data-lucide="target" className="w-5 h-5"></i>
-                  <span className="text-[12px] font-bold tracking-wide">สิทธิที่เหลือ</span>
+                <button onClick={() => changeTab('quota')} className={`flex-1 flex flex-col items-center justify-center py-2 sm:py-2.5 gap-1 rounded-lg transition-all ${getTabColor('quota')}`}>
+                  <i data-lucide="target" className="w-4 h-4 sm:w-5 sm:h-5"></i>
+                  <span className="text-[10px] sm:text-[11px] font-bold">สิทธิที่เหลือ</span>
                 </button>
               </div>
 
-              {/* Input Area */}
-              <div className="flex flex-col items-center justify-center mb-8 bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-                <label className="text-sm font-bold text-gray-500 mb-3 uppercase tracking-wider">
+              {/* Input Area (Grows to fill space) */}
+              <div className="flex-1 min-h-[100px] flex flex-col items-center justify-center bg-white rounded-2xl border border-gray-100 shadow-sm relative">
+                <label className="text-[11px] sm:text-xs font-bold text-gray-400 mb-1 sm:mb-2 uppercase tracking-wider">
                   {activeTab === 'budget' && 'กรอกจำนวนเงินของคุณ (บาท)'}
                   {activeTab === 'price' && 'กรอกราคาสินค้า (บาท)'}
                   {activeTab === 'quota' && 'กรอกสิทธิรัฐที่เหลืออยู่ (บาท)'}
                 </label>
                 
-                <div className="relative w-full flex justify-center items-center">
-                  <span className="text-3xl font-bold text-gray-400 mr-2">฿</span>
+                <div className="relative w-full flex justify-center items-center px-8">
+                  <span className="text-2xl sm:text-3xl font-bold text-gray-300 mr-2">฿</span>
                   <input
                     ref={inputRef}
                     type="text"
                     inputMode="decimal"
                     value={inputValue}
                     onChange={handleInputChange}
-                    className="w-full max-w-[200px] text-center text-5xl font-black text-gray-900 bg-transparent focus:outline-none placeholder-gray-300 p-0"
+                    className="w-full max-w-[200px] text-center text-4xl sm:text-5xl font-black text-gray-800 bg-transparent focus:outline-none placeholder-gray-200 p-0"
                     placeholder="0"
                   />
                   {inputValue && (
-                    <button onClick={clearInput} className="absolute right-0 bg-gray-200 hover:bg-gray-300 text-gray-600 rounded-full p-2 transition-colors">
+                    <button onClick={clearInput} className="absolute right-4 bg-gray-100 hover:bg-gray-200 text-gray-500 rounded-full p-1.5 transition-colors">
                       <i data-lucide="x" className="w-4 h-4"></i>
                     </button>
                   )}
                 </div>
               </div>
 
-              {/* Receipt Card */}
-              <div className="bg-white rounded-2xl p-6 shadow-md border-2 border-gray-100">
-                <div className="space-y-5">
-                  <div className="flex justify-between items-center bg-blue-50 p-3 rounded-xl border border-blue-100">
+              {/* Receipt Card (Shrink to fit) */}
+              <div className="shrink-0 bg-white rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-100 mt-2 sm:mt-3">
+                <div className="space-y-3 sm:space-y-4">
+                  
+                  <div className="flex justify-between items-center bg-blue-50/50 p-2.5 sm:p-3 rounded-xl border border-blue-100/50">
                     <div className="flex flex-col">
-                      <span className="text-sm font-bold text-blue-900">1. เราจ่ายเอง (40%)</span>
-                      <span className="text-xs text-blue-600 font-medium mt-0.5">หักจากแอปเป๋าตัง</span>
+                      <span className="text-xs sm:text-sm font-bold text-blue-900">1. เราจ่ายเอง (40%)</span>
+                      <span className="text-[10px] sm:text-xs text-blue-500 font-medium">หักจากแอปเป๋าตัง</span>
                     </div>
-                    <span className={`text-xl font-black ${inputValue ? 'text-blue-700' : 'text-blue-300'}`}>{formatNumber(result.userPays)}</span>
+                    <span className={`text-lg sm:text-xl font-black ${inputValue ? 'text-blue-600' : 'text-blue-300'}`}>{formatNumber(result.userPays)}</span>
                   </div>
 
-                  <div className="flex justify-between items-center bg-green-50 p-3 rounded-xl border border-green-100">
+                  <div className="flex justify-between items-center bg-green-50/50 p-2.5 sm:p-3 rounded-xl border border-green-100/50">
                     <div className="flex flex-col">
-                      <span className="text-sm font-bold text-green-900">2. รัฐช่วยจ่าย (60%)</span>
-                      <span className="text-xs text-green-600 font-medium mt-0.5">ใช้โควตารายวัน</span>
+                      <span className="text-xs sm:text-sm font-bold text-green-900">2. รัฐช่วยจ่าย (60%)</span>
+                      <span className="text-[10px] sm:text-xs text-green-500 font-medium">ใช้โควตารายวัน</span>
                     </div>
-                    <span className={`text-xl font-black ${inputValue ? 'text-green-600' : 'text-green-300'}`}>+{formatNumber(result.govtPays)}</span>
+                    <span className={`text-lg sm:text-xl font-black ${inputValue ? 'text-green-600' : 'text-green-300'}`}>+{formatNumber(result.govtPays)}</span>
                   </div>
 
-                  <div className="border-t-[3px] border-gray-200 my-1"></div>
+                  <div className="border-t-2 border-gray-100 my-1"></div>
 
                   <div className="flex justify-between items-end pt-1">
-                    <span className="text-lg font-extrabold text-gray-900">รวมได้สินค้ามูลค่า</span>
-                    <span className={`text-3xl font-black ${inputValue ? 'text-gray-900' : 'text-gray-300'}`}>฿ {formatNumber(result.totalValue)}</span>
+                    <span className="text-sm sm:text-base font-extrabold text-gray-800">รวมได้สินค้ามูลค่า</span>
+                    <span className={`text-2xl sm:text-3xl font-black ${inputValue ? 'text-gray-800' : 'text-gray-300'}`}>฿ {formatNumber(result.totalValue)}</span>
                   </div>
                   
-                  <div className="pt-4 mt-2 border-t border-gray-100">
-                    <div className="flex justify-between text-xs font-bold text-gray-500 mb-2">
+                  {/* Progress bar */}
+                  <div className="pt-2 sm:pt-3">
+                    <div className="flex justify-between text-[10px] font-bold text-gray-400 mb-1.5">
                       <span>โควตารัฐวันนี้ (200 บ.)</span>
-                      <span className={result.isMaxReached ? 'text-orange-600' : (inputValue ? 'text-green-600' : 'text-gray-400')}>
+                      <span className={result.isMaxReached ? 'text-orange-500' : (inputValue ? 'text-green-500' : 'text-gray-300')}>
                         {result.isMaxReached ? 'ใช้เต็ม 200 บ.' : `ใช้ไป ${formatNumber(result.govtPays)} บ.`}
                       </span>
                     </div>
-                    <div className="w-full bg-gray-200 h-3 rounded-full overflow-hidden border border-gray-300">
-                      <div className={`h-full transition-all duration-300 ${!inputValue ? 'bg-transparent' : (result.isMaxReached ? 'bg-orange-500' : 'bg-green-500')}`} style={{ width: `${result.quotaPercent}%` }}></div>
+                    <div className="w-full bg-gray-100 h-2.5 rounded-full overflow-hidden">
+                      <div className={`h-full transition-all duration-300 ${!inputValue ? 'bg-transparent' : (result.isMaxReached ? 'bg-orange-400' : 'bg-green-400')}`} style={{ width: `${result.quotaPercent}%` }}></div>
                     </div>
                   </div>
+
                 </div>
               </div>
 
-              {/* Warning */}
-              <div className="mt-5 min-h-[70px]">
+              {/* Warning Area (Fixed reserved space so it doesn't push layout) */}
+              <div className="shrink-0 h-[56px] sm:h-[64px] mt-2 sm:mt-3 relative">
                 {result.isMaxReached && (
-                   <div className="flex items-start gap-3 p-4 bg-orange-100 rounded-xl border-2 border-orange-300 shadow-sm">
-                     <i data-lucide="alert-circle" className="text-orange-600 flex-shrink-0 w-6 h-6"></i>
+                   <div className="absolute inset-0 flex items-center gap-3 p-3 bg-orange-50 rounded-xl border border-orange-200">
+                     <i data-lucide="alert-circle" className="text-orange-500 flex-shrink-0 w-5 h-5"></i>
                      <div>
-                        <p className="text-sm font-bold text-orange-900">แจ้งเตือนโควตาเต็ม</p>
-                        <p className="text-xs text-orange-800 font-medium mt-1">
+                        <p className="text-[11px] sm:text-xs font-bold text-orange-900 leading-tight">แจ้งเตือนโควตาเต็ม</p>
+                        <p className="text-[10px] sm:text-[11px] text-orange-700 font-medium leading-tight mt-0.5">
                           {activeTab === 'quota' && parseFloat(inputValue) > 200 
-                            ? 'รัฐช่วยสูงสุด 200 บาท/วัน ระบบคำนวณจากยอดสูงสุดให้แล้ว'
-                            : 'ยอดเกินขีดจำกัดรัฐช่วย 200 บาท/วัน ส่วนที่เกินนี้คุณจะต้องเป็นผู้จ่ายเองทั้งหมด'}
+                            ? 'ระบบคำนวณจากยอดสูงสุดที่ 200 บาทให้แล้ว'
+                            : 'ส่วนเกินจากโควตา 200 บาท คุณจะต้องจ่ายเองทั้งหมด'}
                         </p>
                      </div>
                    </div>
@@ -260,18 +259,18 @@
 
             </div>
 
-            {/* Bottom Bar */}
-            <div className="absolute bottom-0 left-0 w-full bg-white border-t-4 border-gray-100 px-6 pt-5 pb-8 sm:pb-6 shadow-[0_-15px_30px_rgba(0,0,0,0.08)] pb-safe">
-              <div className="flex items-center justify-between gap-2">
+            {/* 3. Bottom Action Bar (Fixed at bottom) */}
+            <div className="shrink-0 bg-white border-t-2 border-gray-100 px-5 pt-3 pb-safe z-10 shadow-[0_-10px_20px_rgba(0,0,0,0.02)]">
+              <div className="flex items-center justify-between gap-3 min-h-[60px] sm:min-h-[70px]">
                 <div className="flex flex-col">
-                  <span className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-1">
+                  <span className="text-[10px] sm:text-xs font-bold text-gray-400 uppercase tracking-wide mb-0.5">
                     {activeTab === 'budget' && 'ได้ของมูลค่ารวม'}
-                    {activeTab === 'price' && 'สรุปยอดที่ต้องเตรียมจ่าย'}
+                    {activeTab === 'price' && 'เตรียมเงินแสกนจ่าย'}
                     {activeTab === 'quota' && 'ซื้อของได้สูงสุด'}
                   </span>
                   <div className="flex items-baseline">
-                    <span className={`text-2xl font-bold mr-1 ${inputValue ? 'text-gray-900' : 'text-gray-300'}`}>฿</span>
-                    <span className={`text-4xl font-black tracking-tight ${inputValue ? (activeTab === 'price' ? 'text-blue-700' : 'text-gray-900') : 'text-gray-300'}`}>
+                    <span className={`text-xl font-bold mr-1 ${inputValue ? 'text-gray-800' : 'text-gray-300'}`}>฿</span>
+                    <span className={`text-3xl sm:text-4xl font-black tracking-tight ${inputValue ? (activeTab === 'price' ? 'text-blue-600' : 'text-gray-800') : 'text-gray-300'}`}>
                       {inputValue ? (activeTab === 'price' ? formatNumber(result.userPays) : formatNumber(result.totalValue)) : '0'}
                     </span>
                   </div>
@@ -279,9 +278,9 @@
                 
                 <a 
                   href={inputValue ? "paotang://" : "#"}
-                  className={`h-14 px-5 sm:px-6 rounded-2xl flex items-center justify-center transition-colors duration-300 ${inputValue && !result.isMaxReached ? 'bg-green-500 text-white shadow-lg shadow-green-200 hover:bg-green-600' : (inputValue && result.isMaxReached ? 'bg-orange-500 text-white shadow-lg shadow-orange-200 hover:bg-orange-600' : 'bg-gray-100 text-gray-400 pointer-events-none')}`}
+                  className={`h-12 sm:h-14 px-4 sm:px-6 rounded-2xl flex items-center justify-center transition-all ${inputValue && !result.isMaxReached ? 'bg-green-500 text-white shadow-lg shadow-green-200/50 hover:bg-green-600 active:scale-95' : (inputValue && result.isMaxReached ? 'bg-orange-500 text-white shadow-lg shadow-orange-200/50 hover:bg-orange-600 active:scale-95' : 'bg-gray-100 text-gray-400 pointer-events-none')}`}
                 >
-                  <span className="text-base font-bold whitespace-nowrap">ใช้สิทธิ์เลย</span>
+                  <span className="text-sm sm:text-base font-bold whitespace-nowrap">ใช้สิทธิ์เลย</span>
                 </a>
               </div>
             </div>
