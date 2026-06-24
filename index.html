@@ -17,21 +17,25 @@
   
   <link id="dynamic-manifest" rel="manifest" href="">
 
-  <script>
-    const manifestObj = {
-      name: "ไทยช่วยไทยพลัส",
-      short_name: "ไทยช่วยไทยพลัส",
-      start_url: window.location.href.split('?')[0],
-      display: "standalone",
-      background_color: "#f9fafb",
-      theme_color: "#3b82f6",
-      icons: [
-        { src: "https://img2.pic.in.th/-83_20260607192630.png", sizes: "192x192", type: "image/png", purpose: "any maskable" },
-        { src: "https://img2.pic.in.th/-83_20260607192630.png", sizes: "512x512", type: "image/png", purpose: "any maskable" }
-      ]
-    };
-    const manifestBlob = new Blob([JSON.stringify(manifestObj)], {type: 'application/manifest+json'});
-    document.getElementById('dynamic-manifest').href = URL.createObjectURL(manifestBlob);
+  <!-- [FIX 1] ย้าย manifest script มาใส่ defer + try-catch เพื่อไม่ให้ block render หน้าหลัก -->
+  <script defer>
+    try {
+      var manifestObj = {
+        name: "ไทยช่วยไทยพลัส",
+        short_name: "ไทยช่วยไทยพลัส",
+        start_url: window.location.href.split('?')[0],
+        display: "standalone",
+        background_color: "#f9fafb",
+        theme_color: "#3b82f6",
+        icons: [
+          { src: "https://img2.pic.in.th/-83_20260607192630.png", sizes: "192x192", type: "image/png", purpose: "any maskable" },
+          { src: "https://img2.pic.in.th/-83_20260607192630.png", sizes: "512x512", type: "image/png", purpose: "any maskable" }
+        ]
+      };
+      var manifestBlob = new Blob([JSON.stringify(manifestObj)], {type: 'application/manifest+json'});
+      var manifestEl = document.getElementById('dynamic-manifest');
+      if (manifestEl) manifestEl.href = URL.createObjectURL(manifestBlob);
+    } catch(e) { /* ถ้า manifest ล้มเหลวไม่ให้กระทบแอป */ }
   </script>
 
   <script src="https://cdn.tailwindcss.com"></script>
@@ -79,16 +83,12 @@
     // ⚙️ โซนตั้งค่าระบบ (คุณสามารถแก้ไขตัวเลขและข้อมูลตรงนี้ได้เลย)
     // =================================================================
 
-    // 1. ระบุหมายเลขพร้อมเพย์ของคุณ (เบอร์โทรศัพท์ หรือ เลขบัตรประชาชน ไม่ต้องใส่ขีด)
     const PROMPTPAY_ID = "0932522868"; 
 
-    // 2. URL ฐานข้อมูล (นำ URL จาก Google Apps Script มาใส่ตรงนี้)
     const slipOkGasUrl = "https://script.google.com/macros/s/AKfycbxM5l9cUdSIOsWUU-JkGT--t702UaloSxLCAB7fo5LfDv4L4BlD8WEAXBWRqUnpaTUQ/exec"; 
 
-    // 3. URL สำหรับระบบสแกนบิลหน้าแรก (ของเดิม)
     const gasUrl = "https://script.google.com/macros/s/AKfycbx9HwloIr7BUtG6Afj3D0mJL89dDuZtBBa30hnLIerFid7674io7ZrghX7gPvuzkvtL4g/exec";
 
-    // 4. ตั้งราคาแพ็กเกจ (แก้ตัวเลขหลังคำว่า price: ได้เลย ระบบจะเอาไปสร้าง QR ให้อัตโนมัติ)
     const PACKAGE_OPTIONS = [
       { id: '1', months: 1, price: 39,  imgUrl: 'https://img2.pic.in.th/DAE4A88F-A281-4F09-B462-C3AB70089A8D.jpeg', qrUrl: 'https://img1.pic.in.th/images/-33_20260610155146.jpeg' },
       { id: '2', months: 2, price: 69, imgUrl: 'https://img2.pic.in.th/7A991081-561F-499B-815E-A67744BC13BE.jpeg', qrUrl: 'https://img2.pic.in.th/-33_20260610155243.jpeg' },
@@ -131,11 +131,16 @@
       RefreshCw: ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
     };
 
+    // [FIX 2] เพิ่ม guard ให้แน่นขึ้น ป้องกัน crash เมื่อ input ไม่ถูกต้อง
     const getSafeDateObj = (dateStr, timeStr) => {
       try {
-        if (!dateStr || !timeStr) return new Date();
-        const [y, m, d] = dateStr.split('-').map(Number);
-        const [hr, min] = timeStr.split(':').map(Number);
+        if (!dateStr || !timeStr || typeof dateStr !== 'string' || typeof timeStr !== 'string') return new Date();
+        const dateParts = dateStr.split('-');
+        const timeParts = timeStr.split(':');
+        if (dateParts.length < 3 || timeParts.length < 2) return new Date();
+        const [y, m, d] = dateParts.map(Number);
+        const [hr, min] = timeParts.map(Number);
+        if (!y || !m || !d || isNaN(hr) || isNaN(min)) return new Date();
         const dateObj = new Date(y, m - 1, d, hr, min);
         return isNaN(dateObj.getTime()) ? new Date() : dateObj;
       } catch (e) { return new Date(); }
@@ -143,6 +148,10 @@
 
     const getQuotaDateString = (dateObj = new Date()) => {
       try {
+        if (!(dateObj instanceof Date) || isNaN(dateObj.getTime())) {
+          const now = new Date();
+          return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        }
         const d = new Date(dateObj.getTime());
         if (d.getHours() > 23 || (d.getHours() === 23 && d.getMinutes() >= 1)) d.setDate(d.getDate() + 1);
         const yyyy = d.getFullYear();
@@ -156,8 +165,10 @@
     };
 
     const getFullMonthName = (monthStr) => {
-      const months = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
-      return months[parseInt(monthStr, 10) - 1] || "";
+      try {
+        const months = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+        return months[parseInt(monthStr, 10) - 1] || "";
+      } catch(e) { return ""; }
     };
 
     const getShortMonthName = (monthIdx) => {
@@ -196,8 +207,10 @@
     };
 
     const formatNumber = (num) => {
-      if (isNaN(num) || num === null || num === undefined) return '0.00';
-      return Number(num).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      try {
+        if (isNaN(num) || num === null || num === undefined) return '0.00';
+        return Number(num).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      } catch(e) { return '0.00'; }
     };
 
     const generateSessionToken = () => {
@@ -205,13 +218,16 @@
     };
 
     const calculateDaysLeft = (dateStr) => {
-      if(!dateStr) return -1;
-      const exp = new Date(dateStr);
-      const today = new Date();
-      exp.setHours(0,0,0,0);
-      today.setHours(0,0,0,0);
-      const diffTime = exp - today;
-      return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      try {
+        if(!dateStr) return -1;
+        const exp = new Date(dateStr);
+        if (isNaN(exp.getTime())) return -1;
+        const today = new Date();
+        exp.setHours(0,0,0,0);
+        today.setHours(0,0,0,0);
+        const diffTime = exp - today;
+        return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      } catch(e) { return -1; }
     };
 
     const compressImage = (file, maxWidth = 800) => {
@@ -286,6 +302,46 @@
         return result;
     };
 
+    // [FIX 3] Error Boundary ครอบ App ทั้งหมด ถ้า crash จะโชว์หน้า error แทนหน้าขาว
+    class ErrorBoundary extends React.Component {
+      constructor(props) {
+        super(props);
+        this.state = { hasError: false, error: null };
+      }
+      static getDerivedStateFromError(error) {
+        return { hasError: true, error };
+      }
+      componentDidCatch(error, info) {
+        console.error('App crashed:', error, info);
+      }
+      handleReset() {
+        // ล้าง localStorage ที่อาจเสีย แล้ว reload
+        try {
+          localStorage.removeItem('tct_transactions_v2');
+        } catch(e) {}
+        window.location.reload();
+      }
+      render() {
+        if (this.state.hasError) {
+          return (
+            <div style={{display:'flex',alignItems:'center',justifyContent:'center',height:'100dvh',background:'#f8fafc',padding:'20px',flexDirection:'column',gap:'16px',fontFamily:'Prompt,sans-serif',textAlign:'center'}}>
+              <div style={{fontSize:'48px'}}>⚠️</div>
+              <h2 style={{fontWeight:'900',color:'#1e293b',fontSize:'18px',margin:0}}>แอปเกิดข้อผิดพลาด</h2>
+              <p style={{color:'#64748b',fontSize:'12px',margin:0,lineHeight:'1.6'}}>ข้อมูลใน cache อาจเสียหาย<br/>กดปุ่มด้านล่างเพื่อรีเซ็ตและโหลดใหม่</p>
+              <button
+                onClick={() => this.handleReset()}
+                style={{background:'#2563eb',color:'white',border:'none',padding:'12px 24px',borderRadius:'12px',fontWeight:'700',fontSize:'14px',cursor:'pointer',fontFamily:'Prompt,sans-serif'}}
+              >
+                รีเซ็ตและโหลดใหม่
+              </button>
+              <p style={{color:'#94a3b8',fontSize:'10px',margin:0}}>(ประวัติการใช้จ่ายจะถูกลบออก)</p>
+            </div>
+          );
+        }
+        return this.props.children;
+      }
+    }
+
     function App() {
       const [activeTab, setActiveTab] = useState('budget');
       const [inputValue, setInputValue] = useState('');
@@ -318,13 +374,23 @@
       const [isScanningUI, setIsScanningUI] = useState(false);
 
       const getCurrentUser = () => {
-         try { return JSON.parse(localStorage.getItem('tct_current_user')); } catch(e) { return null; }
+         try {
+           const raw = localStorage.getItem('tct_current_user');
+           if (!raw) return null;
+           return JSON.parse(raw);
+         } catch(e) {
+           // [FIX 4] ถ้า parse ล้มเหลว ให้ล้างทิ้งแทนที่จะ crash
+           try { localStorage.removeItem('tct_current_user'); } catch(e2) {}
+           return null;
+         }
       };
 
       const checkActiveSubscription = () => {
-        const user = getCurrentUser();
-        if (!user) return false;
-        return true; 
+        try {
+          const user = getCurrentUser();
+          if (!user) return false;
+          return true;
+        } catch(e) { return false; }
       };
 
       const [isSubscribed, setIsSubscribed] = useState(checkActiveSubscription);
@@ -345,12 +411,20 @@
       const [qrTimeLeft, setQrTimeLeft] = useState(300);
       const [isQrExpired, setIsQrExpired] = useState(false);
 
+      // [FIX 5] localStorage parse ให้ robust กว่าเดิม — ถ้าเสียให้ return [] แทน crash
       const [transactions, setTransactions] = useState(() => {
         try {
           const saved = localStorage.getItem('tct_transactions_v2');
-          return saved ? JSON.parse(saved) : [];
+          if (!saved) return [];
+          const parsed = JSON.parse(saved);
+          // ตรวจว่าเป็น array จริง ถ้าไม่ใช่ให้ล้างทิ้ง
+          if (!Array.isArray(parsed)) {
+            localStorage.removeItem('tct_transactions_v2');
+            return [];
+          }
+          return parsed;
         } catch(e) { 
-          localStorage.removeItem('tct_transactions_v2');
+          try { localStorage.removeItem('tct_transactions_v2'); } catch(e2) {}
           return []; 
         }
       });
@@ -371,27 +445,29 @@
       useEffect(() => {
         let interval;
         const verifySessionBackground = async () => {
-          const user = getCurrentUser();
-          const token = localStorage.getItem('tct_session_token');
-          if (user && token && slipOkGasUrl !== "ใส่_URL_ที่ได้จาก_Apps_Script_ตรวจสลิป_ตรงนี้") {
-            try {
-              const res = await fetch(slipOkGasUrl, {
-                method: 'POST',
-                body: JSON.stringify({ action: 'checkSession', username: user.username, sessionToken: token })
-              });
-              const data = await res.json();
-              if (!data.success) {
-                localStorage.removeItem('tct_current_user');
-                localStorage.removeItem('tct_session_token');
-                setIsSubscribed(false);
-                setShowProfileModal(false);
-                showToastMessage(data.message || 'เซสชันหมดอายุ', 'error');
-              } else {
-                 const updatedUser = { username: user.username, expiryDate: data.currentExpiry };
-                 localStorage.setItem('tct_current_user', JSON.stringify(updatedUser));
-              }
-            } catch(e) {}
-          }
+          try {
+            const user = getCurrentUser();
+            const token = localStorage.getItem('tct_session_token');
+            if (user && token && slipOkGasUrl !== "ใส่_URL_ที่ได้จาก_Apps_Script_ตรวจสลิป_ตรงนี้") {
+              try {
+                const res = await fetch(slipOkGasUrl, {
+                  method: 'POST',
+                  body: JSON.stringify({ action: 'checkSession', username: user.username, sessionToken: token })
+                });
+                const data = await res.json();
+                if (!data.success) {
+                  try { localStorage.removeItem('tct_current_user'); } catch(e) {}
+                  try { localStorage.removeItem('tct_session_token'); } catch(e) {}
+                  setIsSubscribed(false);
+                  setShowProfileModal(false);
+                  showToastMessage(data.message || 'เซสชันหมดอายุ', 'error');
+                } else {
+                   const updatedUser = { username: user.username, expiryDate: data.currentExpiry };
+                   try { localStorage.setItem('tct_current_user', JSON.stringify(updatedUser)); } catch(e) {}
+                }
+              } catch(e) { /* network error — ไม่ให้กระทบ UI */ }
+            }
+          } catch(e) { /* outer guard */ }
         };
 
         if (isSubscribed) {
@@ -431,7 +507,9 @@
       }, []);
 
       useEffect(() => {
-        localStorage.setItem('tct_transactions_v2', JSON.stringify(transactions));
+        try {
+          localStorage.setItem('tct_transactions_v2', JSON.stringify(transactions));
+        } catch(e) { /* storage full หรือ private mode — ไม่ให้ crash */ }
       }, [transactions]);
 
       useEffect(() => {
@@ -505,10 +583,15 @@
         setCalcResult({ userPays: uPays, govtPays: gPays, totalValue: tValue, isMaxReached: isMax, quotaPercent: qPercent, quotaLabel: qLabel, quotaMax: qMax });
       }, [inputValue, activeTab]); 
 
-      const selectedDateTimeObj = getSafeDateObj(selectedDate, selectedTime);
+      // [FIX 6] selectedDateTimeObj ห่อ try-catch เพิ่มเพื่อป้องกัน crash ระหว่าง render
+      const selectedDateTimeObj = (() => {
+        try {
+          return getSafeDateObj(selectedDate, selectedTime);
+        } catch(e) { return new Date(); }
+      })();
+
       const selectedQuotaDateStr = getQuotaDateString(selectedDateTimeObj);
 
-      // --- [เริ่มการแก้ไข] ระบบคำนวณโควตาคงเหลือ สำหรับระบบบันทึก ---
       const targetQuotaMonth = selectedQuotaDateStr.substring(0, 7);
       const usedTargetTotal = transactions.reduce((sum, t) => sum + (t.govtPays || 0), 0);
       const usedTargetMonth = transactions.filter(t => (t.quotaDate || '').startsWith(targetQuotaMonth)).reduce((sum, t) => sum + (t.govtPays || 0), 0);
@@ -518,9 +601,7 @@
       const remainTargetMonth = Math.max(0, MAX_MONTHLY_SUBSIDY - usedTargetMonth);
       const remainTargetDay = Math.max(0, MAX_GOVT_SUBSIDY - usedTargetDay);
 
-      // หายอดรัฐช่วยจ่ายสูงสุดที่สามารถบันทึกได้ในครั้งนี้ (ต้องไม่เกินโควตารายวัน, รายเดือน และรวม)
       const maxAllowedGovtForSave = Math.min(remainTargetDay, remainTargetMonth, remainTargetTotal);
-      // --- [สิ้นสุดการแก้ไข] ---
 
       let saveGovtPaysPreview = 0, saveUserPaysPreview = 0, saveTotalValuePreview = parseFloat(saveInputValue) || 0;
 
@@ -681,9 +762,9 @@
              } catch(e) { console.log('Logout API failed'); }
          }
          
-         localStorage.removeItem('tct_current_user');
-         localStorage.removeItem('tct_temp_user');
-         localStorage.removeItem('tct_session_token');
+         try { localStorage.removeItem('tct_current_user'); } catch(e) {}
+         try { localStorage.removeItem('tct_temp_user'); } catch(e) {}
+         try { localStorage.removeItem('tct_session_token'); } catch(e) {}
          
          setTimeout(() => {
             setIsSubscribed(false);
@@ -732,18 +813,19 @@
              
              if (result.success) {
                 let newToken = generateSessionToken();
-                localStorage.setItem('tct_session_token', newToken);
-                localStorage.setItem('tct_temp_user', JSON.stringify({ username: authInput.username, password: authInput.password, isNewUser: true }));
+                try { localStorage.setItem('tct_session_token', newToken); } catch(e) {}
+                try { localStorage.setItem('tct_temp_user', JSON.stringify({ username: authInput.username, password: authInput.password, isNewUser: true })); } catch(e) {}
                 setAuthMode('packages');
              } else {
                 setAuthError(result.message);
              }
           } 
           else if (authMode === 'login') {
-             let sessionToken = localStorage.getItem('tct_session_token');
+             let sessionToken;
+             try { sessionToken = localStorage.getItem('tct_session_token'); } catch(e) {}
              if (!sessionToken || isForceLogin) {
                  sessionToken = generateSessionToken();
-                 localStorage.setItem('tct_session_token', sessionToken);
+                 try { localStorage.setItem('tct_session_token', sessionToken); } catch(e) {}
              }
 
              const response = await fetch(slipOkGasUrl, {
@@ -761,7 +843,7 @@
              if (result.success) {
                 const userObj = { username: result.username, expiryDate: result.expiryDate };
                 
-                localStorage.setItem('tct_current_user', JSON.stringify(userObj));
+                try { localStorage.setItem('tct_current_user', JSON.stringify(userObj)); } catch(e) {}
                 setIsSubscribed(true);
                 
                 const daysLeft = calculateDaysLeft(userObj.expiryDate);
@@ -810,13 +892,15 @@
           const expectedAmount = selectedOption ? selectedOption.price : 0;
           const monthsToAdd = selectedOption ? selectedOption.months : 1;
           
-          const tempUser = JSON.parse(localStorage.getItem('tct_temp_user'));
+          let tempUser = null;
+          try { tempUser = JSON.parse(localStorage.getItem('tct_temp_user')); } catch(e) {}
           const currentUser = getCurrentUser();
           const targetUser = tempUser || currentUser;
           
           if(!targetUser) throw new Error("ไม่พบข้อมูลผู้ใช้งาน");
 
-          const currentToken = localStorage.getItem('tct_session_token');
+          let currentToken = null;
+          try { currentToken = localStorage.getItem('tct_session_token'); } catch(e) {}
 
           const response = await fetch(slipOkGasUrl, {
               method: "POST",
@@ -840,8 +924,8 @@
 
           if (result.success === true) {
              const finalUser = { username: targetUser.username, expiryDate: result.newExpiryDate };
-             localStorage.setItem('tct_current_user', JSON.stringify(finalUser));
-             localStorage.removeItem('tct_temp_user');
+             try { localStorage.setItem('tct_current_user', JSON.stringify(finalUser)); } catch(e) {}
+             try { localStorage.removeItem('tct_temp_user'); } catch(e) {}
 
              setIsSubscribed(true);
              setShowAuthModal(false);
@@ -885,8 +969,15 @@
              return;
           }
 
-          const finalDate = aiData.date || (!isNaN(fallbackDateObj.getTime()) ? `${fallbackDateObj.getFullYear()}-${String(fallbackDateObj.getMonth()+1).padStart(2,'0')}-${String(fallbackDateObj.getDate()).padStart(2,'0')}` : selectedDate);
-          const finalTime = aiData.time || (!isNaN(fallbackDateObj.getTime()) ? `${String(fallbackDateObj.getHours()).padStart(2,'0')}:${String(fallbackDateObj.getMinutes()).padStart(2,'0')}` : selectedTime);
+          const fallbackDate = !isNaN(fallbackDateObj.getTime()) 
+            ? `${fallbackDateObj.getFullYear()}-${String(fallbackDateObj.getMonth()+1).padStart(2,'0')}-${String(fallbackDateObj.getDate()).padStart(2,'0')}`
+            : selectedDate;
+          const fallbackTime = !isNaN(fallbackDateObj.getTime())
+            ? `${String(fallbackDateObj.getHours()).padStart(2,'0')}:${String(fallbackDateObj.getMinutes()).padStart(2,'0')}`
+            : selectedTime;
+
+          const finalDate = aiData.date || fallbackDate;
+          const finalTime = aiData.time || fallbackTime;
 
           const isDuplicate = transactions.some(tx => {
              if (aiData.referenceNo && tx.referenceNo === aiData.referenceNo) return true;
@@ -1145,10 +1236,8 @@
 
           <div className="w-full max-w-[420px] h-[100dvh] bg-[#f8fafc] flex flex-col shadow-2xl relative overflow-hidden sm:max-h-[850px] sm:rounded-3xl sm:border-[6px] sm:border-gray-900">
             
-            {/* 🔵 พื้นหลังสีฟ้าด้านบน (โค้ง) */}
             <div className="absolute top-0 left-0 right-0 h-[18%] bg-[#3b82f6] rounded-b-[2rem] z-0"></div>
 
-            {/* ส่วน Header (ปุ่ม Profile) */}
             <div className="w-full pt-4 pb-1 px-4 flex justify-between items-center z-10 shrink-0">
               <img src="https://img2.pic.in.th/-85_20260607183516.png" alt="โลโก้ไทยช่วยไทย" className="h-14 sm:h-16 w-auto object-contain drop-shadow-sm" />
               <div className="flex gap-1.5">
@@ -1164,10 +1253,8 @@
               </div>
             </div>
 
-            {/* 📜 Content หลัก */}
             <div className="flex-1 flex flex-col px-4 pb-1 z-10 gap-1.5 overflow-hidden no-scrollbar">
               
-              {/* Card 1: สิทธิวันนี้คงเหลือ */}
               <div className="shrink-0 rounded-2xl p-4 shadow-sm relative flex flex-col justify-center min-h-[95px] bg-cover bg-center border border-green-100" 
                    style={{ backgroundImage: "url('https://img2.pic.in.th/FC981FAA-0FA9-47B7-8F6E-D630431C0577.jpeg')", backgroundColor: '#f0fdf4' }}>
                 <div className="relative z-10">
@@ -1185,7 +1272,6 @@
                 </div>
               </div>
 
-              {/* Card 2: สิทธิเดือนนี้ */}
               <div className="shrink-0 bg-white rounded-2xl p-3 shadow-sm border border-gray-100 flex flex-col justify-between">
                 <div>
                   <div className="flex justify-between items-start mb-0.5">
@@ -1197,7 +1283,6 @@
                     <span className="text-[9px] font-bold text-[#2563eb] ml-2">คงเหลือ</span>
                   </div>
                   
-                  {/* Progress Bar (เดือนนี้) */}
                   <div className="w-full bg-[#f1f5f9] h-1.5 rounded-full overflow-hidden mb-1">
                     <div className="h-full bg-[#2563eb] rounded-full" style={{ width: `${(usedQuotaMonth / MAX_MONTHLY_SUBSIDY) * 100}%` }}></div>
                   </div>
@@ -1207,7 +1292,6 @@
                   </div>
                 </div>
 
-                {/* สิทธิรวมตลอดโครงการ */}
                 <div onClick={() => { setHistoryFilter('all'); setShowHistory(true); }} className="mt-2 bg-[#f8fafc] rounded-xl p-2 flex flex-col gap-1.5 border border-[#f1f5f9] cursor-pointer hover:bg-gray-50 active:scale-[0.98] transition-transform">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -1227,7 +1311,6 @@
                 </div>
               </div>
 
-              {/* Tabs */}
               <div className="shrink-0 flex bg-white rounded-xl shadow-sm border border-gray-100 p-1">
                 <button onClick={() => changeTab('budget')} className={`flex-1 py-1.5 flex items-center justify-center gap-1.5 rounded-lg text-[10px] font-bold transition-colors ${activeTab === 'budget' ? 'bg-[#2563eb] text-white shadow-md' : 'text-gray-500 bg-transparent'}`}>
                   <Icons.Wallet className="w-3 h-3" /> จำนวนเงิน
@@ -1240,7 +1323,6 @@
                 </button>
               </div>
 
-              {/* กล่องกรอกตัวเลข ในหน้าหลัก */}
               <div className="shrink-0 bg-white rounded-2xl p-2.5 shadow-sm border border-gray-100 flex flex-col justify-center relative">
                 <label className="text-[10px] font-bold text-gray-600 mb-1.5">
                   {activeTab === 'budget' && 'กรอกจำนวนเงินของคุณ (บาท)'}
@@ -1272,7 +1354,6 @@
                 </div>
               </div>
 
-              {/* สรุปรายการ */}
               <div className="shrink-0 bg-white rounded-2xl p-3 shadow-sm border border-gray-100 flex flex-col justify-center">
                 <h3 className="text-[10px] font-bold text-gray-800 mb-2">สรุปรายการ</h3>
                 
@@ -1303,7 +1384,6 @@
                 <div className="flex justify-between items-start">
                   <div className="flex flex-col">
                     <span className="text-[10px] font-bold text-gray-800">จำนวนเงินรวม</span>
-                    {/* ซ่อน label หากยังไม่ได้พิมพ์ เพื่อความสะอาดตา */}
                     {calcResult.quotaLabel && (
                       <span className="text-[8px] text-gray-500">{calcResult.quotaLabel}</span>
                     )}
@@ -1314,7 +1394,6 @@
                 </div>
               </div>
 
-              {/* ⚠️ แถบแจ้งเตือนเกินโควตา */}
               {calcResult.isMaxReached && activeTab !== 'quota' && (
                  <div className="shrink-0 flex items-start gap-2 p-2 bg-orange-50 rounded-xl border border-orange-200 shadow-sm mt-0.5 mb-1">
                    <Icons.AlertCircle className="text-orange-500 flex-shrink-0 w-3.5 h-3.5 mt-0.5" />
@@ -1326,7 +1405,6 @@
 
             </div>
 
-            {/* แถบด้านล่างสุด */}
             <div className="shrink-0 bg-white border-t border-gray-100 px-4 py-2 pb-safe z-20 flex justify-between items-center shadow-[0_-4px_15px_rgba(0,0,0,0.03)] h-[65px]">
               <div className="flex flex-col">
                 <span className="text-[9px] font-bold text-[#2563eb]">
@@ -1355,11 +1433,6 @@
               </a>
             </div>
 
-            {/* =========================================
-                MODALS SECTION 
-            ========================================= */}
-
-            {/* 👤 Modal: หน้าดูข้อมูลบัญชีผู้ใช้งาน */}
             {showProfileModal && (
                <div className="absolute inset-0 z-[60] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-5" onClick={() => setShowProfileModal(false)}>
                   <div className="bg-white rounded-[1.5rem] p-5 w-full max-w-[320px] shadow-2xl animate-slide-up relative border border-gray-100" onClick={(e) => e.stopPropagation()}>
@@ -1393,7 +1466,6 @@
                </div>
             )}
 
-            {/* 🛡️ Modal: ระบบบัญชี (Login/Register/Packages/QR) */}
             {showAuthModal && (
               <div className="absolute inset-0 z-[60] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-5" onClick={() => setShowAuthModal(false)}>
                  <div className="bg-white rounded-[1.5rem] p-5 w-full max-w-[340px] shadow-2xl animate-slide-up relative border border-gray-100 max-h-[90vh] overflow-y-auto no-scrollbar" onClick={(e) => e.stopPropagation()}>
@@ -1402,7 +1474,6 @@
                       <Icons.X className="w-4 h-4" />
                     </button>
 
-                    {/* หน้า เข้าสู่ระบบ (Login) */}
                     {authMode === 'login' && (
                       <div className="text-center pt-2">
                         <h3 className="text-lg font-black text-gray-800 mb-1">เข้าสู่ระบบ (Login)</h3>
@@ -1443,7 +1514,6 @@
                           {isScanningUI ? <Icons.Loader className="w-4 h-4 text-white" /> : 'เข้าสู่ระบบ'}
                         </button>
 
-                        {/* ปุ่มบังคับล็อกอิน กรณีมีเครื่องอื่นล็อกอินค้างไว้ */}
                         {showForceLoginBtn && (
                            <button onClick={(e) => { e.preventDefault(); handleAuthSubmit(true); }} className={`w-full py-2.5 bg-orange-100 text-orange-600 font-bold text-[11px] rounded-xl mb-4 flex items-center justify-center gap-1 transition-all ${isScanningUI ? 'opacity-50 pointer-events-none' : 'hover:bg-orange-200 active:scale-95'}`}>
                              <Icons.MonitorOff className="w-3.5 h-3.5" /> บังคับออกจากระบบอุปกรณ์อื่น
@@ -1456,7 +1526,6 @@
                       </div>
                     )}
 
-                    {/* หน้า สมัครสมาชิก (Register) */}
                     {authMode === 'register' && (
                       <div className="text-center pt-2">
                         <h3 className="text-lg font-black text-gray-800 mb-1">ลงทะเบียนผู้ใช้งานใหม่</h3>
@@ -1520,7 +1589,6 @@
                       </div>
                     )}
 
-                    {/* หน้า เลือกแพ็กเกจรูปภาพ */}
                     {authMode === 'packages' && (
                       <div className="pt-2">
                         <div className="text-center mb-4">
@@ -1542,7 +1610,6 @@
                       </div>
                     )}
 
-                    {/* หน้า สแกนชำระเงิน ด้วย QR พร้อมเพย์อัตโนมัติ */}
                     {authMode === 'qr' && (
                       <div className="pt-2 text-center flex flex-col items-center relative">
                         <h3 className="text-lg font-black text-gray-800 mb-1">ชำระค่าบริการผ่าน QR Code</h3>
@@ -1550,7 +1617,6 @@
                           แพ็กเกจที่เลือก: {PACKAGE_OPTIONS.find(p=>p.id===selectedPackage)?.months} เดือน ยอดชำระ <span className="font-bold text-indigo-600">฿{PACKAGE_OPTIONS.find(p=>p.id===selectedPackage)?.price}</span>
                         </p>
 
-                        {/* ตัวนับเวลา */}
                         {!isQrExpired && (
                            <div className="mb-3 inline-flex items-center gap-1.5 bg-red-50 border border-red-100 text-red-600 px-3 py-1 rounded-full shadow-sm">
                              <Icons.Clock className="w-3.5 h-3.5" />
@@ -1558,7 +1624,6 @@
                            </div>
                         )}
 
-                        {/* กล่อง QR Code แบบวาดอัตโนมัติตามเลขและราคา */}
                         <div className="bg-white p-2 rounded-2xl border-2 border-gray-100 shadow-md mb-4 w-48 h-48 flex items-center justify-center relative overflow-hidden">
                            <img 
                               src={`https://promptpay.io/${PROMPTPAY_ID}/${PACKAGE_OPTIONS.find(p=>p.id===selectedPackage)?.price}.png`} 
@@ -1566,7 +1631,6 @@
                               className={`w-full h-full object-contain transition-all duration-300 ${isQrExpired ? 'blur-md opacity-40' : ''}`} 
                            />
                            
-                           {/* ข้อความและปุ่มทับ QR กรณีหมดอายุ */}
                            {isQrExpired && (
                               <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/60 backdrop-blur-[2px]">
                                  <Icons.XCircle className="w-8 h-8 text-red-500 mb-1" />
@@ -1578,7 +1642,6 @@
                            )}
                         </div>
 
-                        {/* ปุ่มอัปโหลดสลิป (ปิดใช้งานถ้าหมดอายุ) */}
                         <div className="w-full">
                            <input 
                              type="file" 
@@ -1615,7 +1678,6 @@
               </div>
             )}
 
-            {/* Modal: บันทึกยอด (ของระบบใช้งาน) */}
             {showSaveModal && (
               <div className="absolute inset-0 z-40 flex flex-col justify-end animate-fade-in bg-black/40 backdrop-blur-sm">
                 <div className="flex-1" onClick={() => setShowSaveModal(false)}></div>
@@ -1671,7 +1733,6 @@
                   
                   <p className="text-xs font-semibold text-gray-500 mb-1.5">มูลค่าการใช้จ่าย</p>
                   
-                  {/* กล่องกรอกตัวเลข ในหน้าบันทึก พร้อมปุ่มลบกากบาทสีเทา */}
                   <div className="bg-gray-50 border-2 border-blue-200 rounded-xl p-3 flex items-center mb-4 relative overflow-hidden">
                     <span className="text-xl font-bold text-gray-400 mr-2 shrink-0">฿</span>
                     <input 
@@ -1714,7 +1775,6 @@
               </div>
             )}
 
-            {/* Modal: ประวัติ */}
             {showHistory && (
               <div className="absolute inset-0 z-50 flex flex-col bg-gray-50 animate-slide-up">
                 <div className="pt-10 sm:pt-12 pb-3 px-4 bg-white border-b border-gray-200 flex justify-between items-center shadow-sm">
@@ -1761,7 +1821,6 @@
               </div>
             )}
 
-            {/* 🛡️ Modal: ยืนยันการลบข้อมูล */}
             {deleteConfirmId && (
               <div className="absolute inset-0 z-[100] flex items-center justify-center bg-gray-900/40 backdrop-blur-sm animate-fade-in px-6">
                  <div className="bg-white rounded-[1.5rem] p-5 w-full max-w-[300px] shadow-2xl animate-slide-up text-center border border-gray-100">
@@ -1783,9 +1842,13 @@
       );
     }
 
+    // [FIX 7] ครอบ App ด้วย ErrorBoundary ก่อน render
     const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
+    root.render(
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    );
   </script>
 </body>
 </html>
-
