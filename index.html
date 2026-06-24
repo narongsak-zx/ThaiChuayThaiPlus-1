@@ -6,43 +6,32 @@
   <title>ไทยช่วยไทยพลัส</title>
   
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="theme-color" content="#ffffff">
+  <meta name="theme-color" content="#f9fafb">
   
-  <!-- ตั้งค่าสำหรับ iOS Safari (Apple) -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="ไทยช่วยไทย">
-  <link rel="apple-touch-icon" href="https://img1.pic.in.th/images/-83_20260603112901.png">
-  <link rel="icon" sizes="192x192" href="https://img1.pic.in.th/images/-83_20260603112901.png">
+  <meta name="apple-mobile-web-app-title" content="ไทยช่วยไทยพลัส">
   
-  <!-- แท็ก Manifest ที่จะถูกสร้างด้วย Javascript เพื่อรองรับ Android แบบ 100% -->
+  <link rel="apple-touch-icon" href="https://img2.pic.in.th/-83_20260607192630.png">
+  <link rel="icon" sizes="192x192" href="https://img2.pic.in.th/-83_20260607192630.png">
+  
   <link id="dynamic-manifest" rel="manifest" href="">
 
   <script>
-    // 1. สร้าง Manifest อัตโนมัติ เพื่อให้ Android อ่านค่าและโลโก้ได้ชัวร์ 100%
     const manifestObj = {
-      name: "ไทยช่วยไทยพลัส Pro",
-      short_name: "ไทยช่วยไทย",
+      name: "ไทยช่วยไทยพลัส",
+      short_name: "ไทยช่วยไทยพลัส",
       start_url: window.location.href.split('?')[0],
       display: "standalone",
       background_color: "#f9fafb",
-      theme_color: "#ffffff",
+      theme_color: "#3b82f6",
       icons: [
-        { src: "https://img1.pic.in.th/images/-83_20260603112901.png", sizes: "192x192", type: "image/png", purpose: "any maskable" },
-        { src: "https://img1.pic.in.th/images/-83_20260603112901.png", sizes: "512x512", type: "image/png", purpose: "any maskable" }
+        { src: "https://img2.pic.in.th/-83_20260607192630.png", sizes: "192x192", type: "image/png", purpose: "any maskable" },
+        { src: "https://img2.pic.in.th/-83_20260607192630.png", sizes: "512x512", type: "image/png", purpose: "any maskable" }
       ]
     };
     const manifestBlob = new Blob([JSON.stringify(manifestObj)], {type: 'application/manifest+json'});
     document.getElementById('dynamic-manifest').href = URL.createObjectURL(manifestBlob);
-
-    // 2. สร้าง Service Worker จำลอง (ข้อบังคับของ Android เพื่อติดตั้งแอปเต็มจอแบบ WebAPK)
-    if ('serviceWorker' in navigator) {
-      const swCode = "self.addEventListener('fetch', function(e) {});";
-      const swBlob = new Blob([swCode], { type: 'application/javascript' });
-      window.addEventListener('load', function() {
-        navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(err => console.log('SW Setup Failed', err));
-      });
-    }
   </script>
 
   <script src="https://cdn.tailwindcss.com"></script>
@@ -51,11 +40,19 @@
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700;800;900&display=swap');
+    
     html, body {
+      font-family: 'Prompt', sans-serif;
+      position: fixed;
+      width: 100%;
+      height: 100%;
+      max-width: 100vw;
       overflow: hidden;
-      overscroll-behavior-y: none;
+      overflow-x: hidden;
+      overscroll-behavior: none;
       -webkit-tap-highlight-color: transparent;
-      touch-action: manipulation;
+      background-color: #e5e7eb; 
     }
     .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0.5rem); }
     .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -68,28 +65,70 @@
     .animate-slide-up { animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    .animate-spin-slow { animation: spin 2s linear infinite; }
   </style>
 </head>
-<body class="bg-gray-200 text-gray-900">
+<body class="text-gray-900">
   <div id="root"></div>
 
   <script type="text/babel">
     const { useState, useEffect, useRef } = React;
 
+    // =================================================================
+    // ⚙️ โซนตั้งค่าระบบ (คุณสามารถแก้ไขตัวเลขและข้อมูลตรงนี้ได้เลย)
+    // =================================================================
+
+    // 1. ระบุหมายเลขพร้อมเพย์ของคุณ (เบอร์โทรศัพท์ หรือ เลขบัตรประชาชน ไม่ต้องใส่ขีด)
+    const PROMPTPAY_ID = "0932522868"; 
+
+    // 2. URL ฐานข้อมูล (นำ URL จาก Google Apps Script มาใส่ตรงนี้)
+    const slipOkGasUrl = "https://script.google.com/macros/s/AKfycbxM5l9cUdSIOsWUU-JkGT--t702UaloSxLCAB7fo5LfDv4L4BlD8WEAXBWRqUnpaTUQ/exec"; 
+
+    // 3. URL สำหรับระบบสแกนบิลหน้าแรก (ของเดิม)
+    const gasUrl = "https://script.google.com/macros/s/AKfycbx9HwloIr7BUtG6Afj3D0mJL89dDuZtBBa30hnLIerFid7674io7ZrghX7gPvuzkvtL4g/exec";
+
+    // 4. ตั้งราคาแพ็กเกจ (แก้ตัวเลขหลังคำว่า price: ได้เลย ระบบจะเอาไปสร้าง QR ให้อัตโนมัติ)
+    const PACKAGE_OPTIONS = [
+      { id: '1', months: 1, price: 39,  imgUrl: 'https://img2.pic.in.th/DAE4A88F-A281-4F09-B462-C3AB70089A8D.jpeg', qrUrl: 'https://img1.pic.in.th/images/-33_20260610155146.jpeg' },
+      { id: '2', months: 2, price: 69, imgUrl: 'https://img2.pic.in.th/7A991081-561F-499B-815E-A67744BC13BE.jpeg', qrUrl: 'https://img2.pic.in.th/-33_20260610155243.jpeg' },
+      { id: '3', months: 3, price: 99, imgUrl: 'https://img2.pic.in.th/86AE9C77-EDFD-4A93-874E-7ABD8F30B1FE.jpeg', qrUrl: 'https://img2.pic.in.th/-33_20260610155311.jpeg' },
+    ];
+
+    // =================================================================
+
     const Icons = {
-      Wallet: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>,
-      Tag: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42l-8.704-8.704z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></svg>,
-      Target: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,
-      X: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>,
-      History: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
-      Trash: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>,
-      Check: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>,
-      Save: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>,
-      Pen: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>,
-      AlertCircle: () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
-      Calendar: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
-      Clock: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
-      ChevronDown: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+      Wallet: ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>,
+      Tag: ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42l-8.704-8.704z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></svg>,
+      Target: ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>,
+      X: ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>,
+      History: ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+      Trash: ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>,
+      Check: ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>,
+      Save: ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>,
+      Pen: ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>,
+      AlertCircle: ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
+      Calendar: ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
+      Clock: ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+      ChevronDown: ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>,
+      Loader: ({className}) => <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`animate-spin-slow text-indigo-500 ${className || ''}`}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>,
+      XCircle: ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>,
+      DocumentCheck: ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="m9 15 2 2 4-4"/></svg>,
+      Camera: ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>,
+      Info: ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>,
+      Bookmark: ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>,
+      ChevronRight: ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>,
+      Coins: ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="8" cy="8" r="6"/><path d="M18.09 10.37A6 6 0 1 1 10.34 18"/><path d="M7 6h1v4"/><path d="m16.71 13.88.7.71-2.82 2.82"/></svg>,
+      Lock: ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>,
+      User: ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>,
+      UserPlus: ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>,
+      QrCode: ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/></svg>,
+      Eye: ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>,
+      EyeOff: ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" y1="2" x2="22" y2="22"/></svg>,
+      UploadCloud: ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"/><path d="M12 12v9"/><path d="m16 16-4-4-4 4"/></svg>,
+      UserCircle: ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="10" r="3"/><path d="M7 20.662V19a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v1.662"/></svg>,
+      MonitorOff: ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 17H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3"/><path d="M22 15V5a2 2 0 0 0-2-2H9"/><path d="M8 21h8"/><path d="M12 17v4"/><line x1="2" y1="2" x2="22" y2="22"/></svg>,
+      RefreshCw: ({className}) => <svg className={className} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
     };
 
     const getSafeDateObj = (dateStr, timeStr) => {
@@ -121,6 +160,11 @@
       return months[parseInt(monthStr, 10) - 1] || "";
     };
 
+    const getShortMonthName = (monthIdx) => {
+      const months = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+      return months[monthIdx] || "";
+    };
+
     const formatGroupHeader = (key, filterType) => {
       try {
         if (filterType === 'month' && key) {
@@ -134,6 +178,13 @@
       } catch(e) { return "รายการ"; }
     };
 
+    const formatDisplayTimeObj = (d) => {
+      try {
+        if (!(d instanceof Date) || isNaN(d.getTime())) return '';
+        return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} น.`;
+      } catch(e) { return ''; }
+    };
+    
     const formatDisplayDateObj = (d) => {
       try {
         if (!(d instanceof Date) || isNaN(d.getTime())) return '';
@@ -144,16 +195,95 @@
       } catch(e) { return ''; }
     };
 
-    const formatDisplayTimeObj = (d) => {
-      try {
-        if (!(d instanceof Date) || isNaN(d.getTime())) return '';
-        return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')} น.`;
-      } catch(e) { return ''; }
+    const formatNumber = (num) => {
+      if (isNaN(num) || num === null || num === undefined) return '0.00';
+      return Number(num).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     };
 
-    const formatNumber = (num) => {
-      if (isNaN(num) || num === null || num === undefined) return '0';
-      return Number(num).toLocaleString('th-TH', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    const generateSessionToken = () => {
+       return Math.random().toString(36).substring(2) + Date.now().toString(36);
+    };
+
+    const calculateDaysLeft = (dateStr) => {
+      if(!dateStr) return -1;
+      const exp = new Date(dateStr);
+      const today = new Date();
+      exp.setHours(0,0,0,0);
+      today.setHours(0,0,0,0);
+      const diffTime = exp - today;
+      return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    };
+
+    const compressImage = (file, maxWidth = 800) => {
+        return new Promise((resolve, reject) => {
+            const objectUrl = URL.createObjectURL(file);
+            const img = new Image();
+            img.onload = () => {
+                URL.revokeObjectURL(objectUrl);
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+                
+                if (width > maxWidth) {
+                    height = Math.round((height * maxWidth) / width);
+                    width = maxWidth;
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                const base64 = canvas.toDataURL('image/jpeg', 0.6).split(',')[1];
+                resolve(base64);
+            };
+            img.onerror = () => {
+                URL.revokeObjectURL(objectUrl);
+                reject(new Error("แอปโหลดรูปภาพไม่สำเร็จ"));
+            };
+            img.src = objectUrl;
+        });
+    };
+
+    const analyzeSlipWithGas = async (file) => {
+        if (!gasUrl || gasUrl.trim() === "" || gasUrl === "ใส่_URL_ที่ได้จาก_Google_Apps_Script_ตรงนี้") {
+             throw new Error("ยังไม่ได้ตั้งค่าลิงก์ Apps Script ในโค้ดหน้าเว็บครับ");
+        }
+
+        const base64Data = await compressImage(file);
+        let response;
+
+        try {
+            response = await fetch(gasUrl, {
+                method: "POST",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({
+                    imageBase64: base64Data,
+                    mimeType: file.type || "image/jpeg"
+                })
+            });
+        } catch (err) {
+            throw new Error("การเชื่อมต่อขัดข้อง กรุณาตรวจสอบอินเทอร์เน็ต");
+        }
+
+        if (!response.ok) {
+            throw new Error(`เซิร์ฟเวอร์หลังบ้านขัดข้อง (Status: ${response.status})`);
+        }
+
+        const textResult = await response.text();
+        let result;
+        
+        try {
+            result = JSON.parse(textResult);
+        } catch(e) {
+            throw new Error("ข้อมูลจากเซิร์ฟเวอร์หลังบ้านผิดปกติ");
+        }
+
+        if (result.error) {
+            throw new Error(result.message);
+        }
+
+        return result;
     };
 
     function App() {
@@ -161,27 +291,68 @@
       const [inputValue, setInputValue] = useState('');
       const inputRef = useRef(null);
       
-      const [calcResult, setCalcResult] = useState({ userPays: 0, govtPays: 0, totalValue: 0, isMaxReached: false, quotaPercent: 0 });
+      const [calcResult, setCalcResult] = useState({ userPays: 0, govtPays: 0, totalValue: 0, isMaxReached: false, quotaPercent: 0, quotaLabel: '', quotaMax: 200 });
       
       const [showHistory, setShowHistory] = useState(false);
       const [historyFilter, setHistoryFilter] = useState('today'); 
       const [expandedMonth, setExpandedMonth] = useState(null); 
 
-      const [showToast, setShowToast] = useState(false);
-      const [toastMsg, setToastMsg] = useState('');
+      const [deleteConfirmId, setDeleteConfirmId] = useState(null);
+
+      const [toastData, setToastData] = useState({ show: false, msg: '', type: 'success' });
       
       const [showSaveModal, setShowSaveModal] = useState(false);
       const [saveInputValue, setSaveInputValue] = useState('');
       const saveInputRef = useRef(null);
       
+      const [scannedGovtPays, setScannedGovtPays] = useState(null);
+      const [scannedUserPays, setScannedUserPays] = useState(null);
+      const [scannedRefNo, setScannedRefNo] = useState(null);
+      
       const [selectedDate, setSelectedDate] = useState('');
       const [selectedTime, setSelectedTime] = useState('');
+      
+      const fileInputRef = useRef(null);
+
+      const isScanningRef = useRef(false);
+      const [isScanningUI, setIsScanningUI] = useState(false);
+
+      const getCurrentUser = () => {
+         try { return JSON.parse(localStorage.getItem('tct_current_user')); } catch(e) { return null; }
+      };
+
+      const checkActiveSubscription = () => {
+        const user = getCurrentUser();
+        if (!user) return false;
+        return true; 
+      };
+
+      const [isSubscribed, setIsSubscribed] = useState(checkActiveSubscription);
+      
+      const [showAuthModal, setShowAuthModal] = useState(false);
+      const [showProfileModal, setShowProfileModal] = useState(false); 
+      const [authMode, setAuthMode] = useState('login'); 
+      const [authInput, setAuthInput] = useState({ username: '', password: '', confirmPassword: '' });
+      const [authError, setAuthError] = useState('');
+      const [showForceLoginBtn, setShowForceLoginBtn] = useState(false); 
+      const [selectedPackage, setSelectedPackage] = useState(null); 
+      
+      const [showPassword, setShowPassword] = useState(false);
+      const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+      const [paymentSlip, setPaymentSlip] = useState(null);
+      
+      const [qrTimeLeft, setQrTimeLeft] = useState(300);
+      const [isQrExpired, setIsQrExpired] = useState(false);
 
       const [transactions, setTransactions] = useState(() => {
         try {
           const saved = localStorage.getItem('tct_transactions_v2');
           return saved ? JSON.parse(saved) : [];
-        } catch(e) { return []; }
+        } catch(e) { 
+          localStorage.removeItem('tct_transactions_v2');
+          return []; 
+        }
       });
 
       const [currentDateObj, setCurrentDateObj] = useState(new Date());
@@ -191,6 +362,68 @@
       const MAX_MONTHLY_SUBSIDY = 1000;
       const MAX_TOTAL_SUBSIDY = 4000;
       const paotangDeepLink = "paotang://gwallet"; 
+
+      const currentMonthIdx = currentDateObj.getMonth();
+      const currentYear = currentDateObj.getFullYear();
+      const shortMonthName = getShortMonthName(currentMonthIdx);
+      const lastDayOfMonth = new Date(currentYear, currentMonthIdx + 1, 0).getDate();
+
+      useEffect(() => {
+        let interval;
+        const verifySessionBackground = async () => {
+          const user = getCurrentUser();
+          const token = localStorage.getItem('tct_session_token');
+          if (user && token && slipOkGasUrl !== "ใส่_URL_ที่ได้จาก_Apps_Script_ตรวจสลิป_ตรงนี้") {
+            try {
+              const res = await fetch(slipOkGasUrl, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'checkSession', username: user.username, sessionToken: token })
+              });
+              const data = await res.json();
+              if (!data.success) {
+                localStorage.removeItem('tct_current_user');
+                localStorage.removeItem('tct_session_token');
+                setIsSubscribed(false);
+                setShowProfileModal(false);
+                showToastMessage(data.message || 'เซสชันหมดอายุ', 'error');
+              } else {
+                 const updatedUser = { username: user.username, expiryDate: data.currentExpiry };
+                 localStorage.setItem('tct_current_user', JSON.stringify(updatedUser));
+              }
+            } catch(e) {}
+          }
+        };
+
+        if (isSubscribed) {
+           verifySessionBackground(); 
+           interval = setInterval(verifySessionBackground, 45000); 
+        }
+        return () => clearInterval(interval);
+      }, [isSubscribed]);
+      
+      useEffect(() => {
+        if (authMode === 'qr' && qrTimeLeft > 0 && !isQrExpired) {
+          const timerId = setInterval(() => {
+            setQrTimeLeft((prev) => prev - 1);
+          }, 1000);
+          return () => clearInterval(timerId);
+        } else if (qrTimeLeft === 0 && !isQrExpired) {
+          setIsQrExpired(true);
+        }
+      }, [authMode, qrTimeLeft, isQrExpired]);
+
+      const formatTime = (seconds) => {
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${m}:${s.toString().padStart(2, '0')}`;
+      };
+
+      const handleRegenerateQR = () => {
+         setQrTimeLeft(300);
+         setIsQrExpired(false);
+         setPaymentSlip(null);
+         setAuthError('');
+      };
 
       useEffect(() => {
         const timer = setInterval(() => setCurrentDateObj(new Date()), 10000);
@@ -204,6 +437,11 @@
       useEffect(() => {
         setExpandedMonth(null);
       }, [historyFilter]);
+
+      const showToastMessage = (msg, type = 'success') => {
+        setToastData({ show: true, msg, type });
+        setTimeout(() => setToastData(prev => ({ ...prev, show: false })), 6000);
+      };
 
       const totalUsed = transactions.reduce((sum, t) => sum + (t.govtPays || 0), 0);
       const remainingTotalQuota = Math.max(0, MAX_TOTAL_SUBSIDY - totalUsed);
@@ -225,11 +463,13 @@
       useEffect(() => {
         const parsedValue = parseFloat(inputValue);
         if (!inputValue || isNaN(parsedValue) || parsedValue <= 0) {
-          setCalcResult({ userPays: 0, govtPays: 0, totalValue: 0, isMaxReached: false, quotaPercent: 0 });
+          setCalcResult({ userPays: 0, govtPays: 0, totalValue: 0, isMaxReached: false, quotaPercent: 0, quotaLabel: '', quotaMax: 200 });
           return;
         }
 
         let gPays = 0, uPays = 0, tValue = 0, isMax = false;
+        let qLabel = '';
+        let qMax = 200;
 
         if (activeTab === 'budget') {
           const theoretical = parsedValue * 1.5; 
@@ -244,59 +484,95 @@
           tValue = parsedValue;
           isMax = theoretical > MAX_GOVT_SUBSIDY;
         } else if (activeTab === 'quota') {
-          gPays = Math.min(parsedValue, MAX_GOVT_SUBSIDY);
+          gPays = parsedValue;
           tValue = gPays / 0.60;
           uPays = tValue - gPays;
           isMax = false;
+          
+          if (parsedValue <= 200) {
+              qLabel = 'สิทธิไทยช่วยไทยพลัส 200 บาท';
+              qMax = 200;
+          } else if (parsedValue <= 1000) {
+              qLabel = 'สิทธิไทยช่วยไทยพลัส 1,000 บาท';
+              qMax = 1000;
+          } else {
+              qLabel = 'สิทธิไทยช่วยไทยพลัส 4,000 บาท';
+              qMax = 4000;
+          }
         }
 
-        const qPercent = Math.min((gPays / MAX_GOVT_SUBSIDY) * 100, 100);
-        setCalcResult({ userPays: uPays, govtPays: gPays, totalValue: tValue, isMaxReached: isMax, quotaPercent: qPercent });
+        const qPercent = Math.min((gPays / qMax) * 100, 100);
+        setCalcResult({ userPays: uPays, govtPays: gPays, totalValue: tValue, isMaxReached: isMax, quotaPercent: qPercent, quotaLabel: qLabel, quotaMax: qMax });
       }, [inputValue, activeTab]); 
 
       const selectedDateTimeObj = getSafeDateObj(selectedDate, selectedTime);
       const selectedQuotaDateStr = getQuotaDateString(selectedDateTimeObj);
-      const selectedQuotaMonthStr = selectedQuotaDateStr.substring(0, 7);
 
-      const targetTotalRemain = remainingTotalQuota; 
+      // --- [เริ่มการแก้ไข] ระบบคำนวณโควตาคงเหลือ สำหรับระบบบันทึก ---
+      const targetQuotaMonth = selectedQuotaDateStr.substring(0, 7);
+      const usedTargetTotal = transactions.reduce((sum, t) => sum + (t.govtPays || 0), 0);
+      const usedTargetMonth = transactions.filter(t => (t.quotaDate || '').startsWith(targetQuotaMonth)).reduce((sum, t) => sum + (t.govtPays || 0), 0);
+      const usedTargetDay = transactions.filter(t => t.quotaDate === selectedQuotaDateStr).reduce((sum, t) => sum + (t.govtPays || 0), 0);
 
-      const targetMonthTxs = transactions.filter(t => (t.quotaDate || '').startsWith(selectedQuotaMonthStr));
-      const targetMonthUsed = targetMonthTxs.reduce((sum, t) => sum + (t.govtPays || 0), 0);
-      const targetMonthRemainTheory = Math.max(0, MAX_MONTHLY_SUBSIDY - targetMonthUsed);
-      const targetMonthRemain = Math.min(targetMonthRemainTheory, targetTotalRemain);
+      const remainTargetTotal = Math.max(0, MAX_TOTAL_SUBSIDY - usedTargetTotal);
+      const remainTargetMonth = Math.max(0, MAX_MONTHLY_SUBSIDY - usedTargetMonth);
+      const remainTargetDay = Math.max(0, MAX_GOVT_SUBSIDY - usedTargetDay);
 
-      const targetDayTxs = transactions.filter(t => t.quotaDate === selectedQuotaDateStr);
-      const targetDayUsed = targetDayTxs.reduce((sum, t) => sum + (t.govtPays || 0), 0);
-      const targetDayRemainTheory = Math.max(0, MAX_GOVT_SUBSIDY - targetDayUsed);
-      
-      const targetFinalRemain = Math.min(targetDayRemainTheory, targetMonthRemain);
+      // หายอดรัฐช่วยจ่ายสูงสุดที่สามารถบันทึกได้ในครั้งนี้ (ต้องไม่เกินโควตารายวัน, รายเดือน และรวม)
+      const maxAllowedGovtForSave = Math.min(remainTargetDay, remainTargetMonth, remainTargetTotal);
+      // --- [สิ้นสุดการแก้ไข] ---
 
       let saveGovtPaysPreview = 0, saveUserPaysPreview = 0, saveTotalValuePreview = parseFloat(saveInputValue) || 0;
 
-      if (saveTotalValuePreview > 0) {
+      if (scannedGovtPays !== null && scannedUserPays !== null && saveTotalValuePreview > 0 && Math.abs(saveTotalValuePreview - (parseFloat(scannedGovtPays) + parseFloat(scannedUserPays))) < 0.1) {
+        saveGovtPaysPreview = Math.min(parseFloat(scannedGovtPays), maxAllowedGovtForSave);
+        saveUserPaysPreview = saveTotalValuePreview - saveGovtPaysPreview;
+      } else if (saveTotalValuePreview > 0) {
         const theoretical = saveTotalValuePreview * 0.60;
-        saveGovtPaysPreview = Math.min(theoretical, targetFinalRemain);
+        saveGovtPaysPreview = Math.min(theoretical, maxAllowedGovtForSave); 
         saveUserPaysPreview = saveTotalValuePreview - saveGovtPaysPreview;
       }
 
       const handleInputChange = (e) => {
-        const val = e.target.value.replace(/[^0-9.]/g, '');
+        let val = e.target.value.replace(/[^0-9.]/g, '');
         if ((val.match(/\./g) || []).length > 1) return;
+        
+        if (val.length > 1 && val.startsWith('0') && !val.startsWith('0.')) {
+            val = val.replace(/^0+/, '');
+            if (val === '') val = '0';
+        }
+
         if (activeTab === 'quota') {
            const numVal = parseFloat(val);
-           if (!isNaN(numVal) && numVal > MAX_GOVT_SUBSIDY) return; 
+           if (!isNaN(numVal) && numVal > MAX_TOTAL_SUBSIDY) return; 
         }
         setInputValue(val);
       };
 
       const handleSaveInputChange = (e) => {
-        const val = e.target.value.replace(/[^0-9.]/g, '');
-        if ((val.match(/\./g) || []).length <= 1) setSaveInputValue(val);
+        let val = e.target.value.replace(/[^0-9.]/g, '');
+        if ((val.match(/\./g) || []).length <= 1) {
+            if (val.length > 1 && val.startsWith('0') && !val.startsWith('0.')) {
+                val = val.replace(/^0+/, '');
+                if (val === '') val = '0';
+            }
+            setSaveInputValue(val);
+            if (scannedGovtPays !== null && parseFloat(val) !== (parseFloat(scannedGovtPays) + parseFloat(scannedUserPays))) {
+                 setScannedGovtPays(null);
+                 setScannedUserPays(null);
+                 setScannedRefNo(null); 
+            }
+        }
       };
 
-      const clearInput = () => {
+      const clearInput = (e) => {
+        if (e) e.preventDefault();
         setInputValue('');
-        inputRef.current?.focus();
+      };
+
+      const clearSaveInput = (e) => {
+        if (e) e.preventDefault();
+        setSaveInputValue('');
       };
 
       const changeTab = (tabId) => {
@@ -312,42 +588,338 @@
         const newTx = {
           id: Date.now().toString() + Math.random().toString(36).substr(2, 5),
           quotaDate: selectedQuotaDateStr, 
+          slipDate: selectedDate, 
+          slipTime: selectedTime, 
           timestamp: finalTimestamp, 
           userPays: saveUserPaysPreview,
           govtPays: saveGovtPaysPreview,
           totalValue: saveTotalValuePreview,
-          inputType: 'manual_save'
+          referenceNo: scannedRefNo, 
+          inputType: scannedGovtPays !== null ? 'ai_vision' : 'manual_save'
         };
 
         setTransactions(prev => [newTx, ...prev].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp)));
         setShowSaveModal(false);
         setSaveInputValue('');
         
-        setToastMsg(`บันทึกยอด ${formatNumber(saveTotalValuePreview)} บ. สำเร็จ!`);
-        setShowToast(true);
-        setTimeout(() => setShowToast(false), 2500);
+        showToastMessage(`บันทึกยอด ${formatNumber(saveTotalValuePreview)} บาท สำเร็จ`, 'success');
       };
 
-      const handleDelete = (id) => {
+      const executeDelete = (id) => {
         setTransactions(prev => prev.filter(t => t.id !== id));
-      };
-
-      const getTabColor = (tabId) => {
-        if (activeTab !== tabId) return 'text-gray-500 hover:text-gray-600 bg-transparent';
-        switch (tabId) {
-          case 'budget': return 'bg-blue-600 text-white shadow-sm';
-          case 'price': return 'bg-gray-800 text-white shadow-sm';
-          case 'quota': return 'bg-emerald-600 text-white shadow-sm';
-          default: return 'bg-white text-gray-800';
-        }
+        setDeleteConfirmId(null);
+        showToastMessage('ลบรายการใช้จ่ายแล้ว', 'success');
       };
 
       const openSaveModal = () => {
         setSaveInputValue('');
+        setScannedGovtPays(null); 
+        setScannedUserPays(null); 
+        setScannedRefNo(null);
+        
         const now = new Date();
-        setSelectedDate(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`);
-        setSelectedTime(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
+        const y = now.getFullYear();
+        const m = String(now.getMonth() + 1).padStart(2, '0');
+        const d = String(now.getDate()).padStart(2, '0');
+        const h = String(now.getHours()).padStart(2, '0');
+        const min = String(now.getMinutes()).padStart(2, '0');
+        
+        setSelectedDate(`${y}-${m}-${d}`);
+        setSelectedTime(`${h}:${min}`);
         setShowSaveModal(true);
+      };
+
+      const openAuthModalSafe = (mode) => {
+          setShowProfileModal(false);
+          setTimeout(() => {
+              toggleAuthMode(mode);
+              setShowAuthModal(true);
+          }, 150); 
+      };
+
+      const handleTriggerFileInput = () => {
+        if (!isScanningRef.current) {
+           const user = getCurrentUser();
+           if (user) {
+               const daysLeft = calculateDaysLeft(user.expiryDate);
+               if (daysLeft < 0) {
+                   setShowProfileModal(true);
+                   showToastMessage('แพ็กเกจของคุณหมดอายุ กรุณาต่ออายุเพื่อใช้งานต่อ', 'error');
+               } else {
+                   fileInputRef.current?.click();
+               }
+           } else {
+               setAuthMode('login');
+               setAuthInput({username: '', password: '', confirmPassword: ''});
+               setAuthError('');
+               setShowForceLoginBtn(false);
+               setPaymentSlip(null);
+               setShowAuthModal(true);
+           }
+        }
+      };
+
+      const toggleAuthMode = (mode) => {
+         setAuthMode(mode);
+         setAuthError('');
+         setShowForceLoginBtn(false);
+         setAuthInput({username: '', password: '', confirmPassword: ''});
+         setShowPassword(false);
+         setShowConfirmPassword(false);
+      };
+
+      const handleLogout = async () => {
+         setIsScanningUI(true); 
+         const user = getCurrentUser();
+         
+         if (user && slipOkGasUrl !== "ใส่_URL_ที่ได้จาก_Apps_Script_ตรวจสลิป_ตรงนี้") {
+             try {
+                await fetch(slipOkGasUrl, {
+                   method: "POST",
+                   body: JSON.stringify({ action: 'logout', username: user.username })
+                });
+             } catch(e) { console.log('Logout API failed'); }
+         }
+         
+         localStorage.removeItem('tct_current_user');
+         localStorage.removeItem('tct_temp_user');
+         localStorage.removeItem('tct_session_token');
+         
+         setTimeout(() => {
+            setIsSubscribed(false);
+            setShowProfileModal(false);
+            setIsScanningUI(false);
+            showToastMessage('ออกจากระบบเรียบร้อยแล้ว', 'success');
+         }, 500);
+      };
+
+      const handleAuthSubmit = async (isForceLogin = false) => {
+        setAuthError('');
+        setShowForceLoginBtn(false);
+
+        if (slipOkGasUrl === "ใส่_URL_ที่ได้จาก_Apps_Script_ตรวจสลิป_ตรงนี้") {
+           setAuthError('ระบบขัดข้อง: ไม่พบ URL ของฐานข้อมูล กรุณาติดต่อผู้ดูแลระบบ');
+           return;
+        }
+
+        if (authMode === 'login') {
+          if (!authInput.username || !authInput.password) {
+             setAuthError('กรุณาระบุข้อมูลให้ครบถ้วนในทุกช่อง'); return;
+          }
+        } else if (authMode === 'register') {
+          if (!authInput.username || !authInput.password || !authInput.confirmPassword) {
+             setAuthError('กรุณาระบุข้อมูลให้ครบถ้วนในทุกช่อง'); return;
+          }
+          const regex = /^[a-zA-Z0-9]+$/;
+          if (!regex.test(authInput.username)) {
+             setAuthError('รูปแบบชื่อผู้ใช้งานไม่ถูกต้อง (อนุญาตเฉพาะอักษรภาษาอังกฤษและตัวเลข ไม่เว้นวรรค)'); 
+             return;
+          }
+          if (authInput.password !== authInput.confirmPassword) {
+             setAuthError('รหัสผ่านและการยืนยันรหัสผ่านไม่ตรงกัน'); return;
+          }
+        }
+
+        setTimeout(() => setIsScanningUI(true), 50); 
+        
+        try {
+          if (authMode === 'register') {
+             const response = await fetch(slipOkGasUrl, {
+                method: "POST",
+                body: JSON.stringify({ action: 'checkUsername', username: authInput.username })
+             });
+             const result = await response.json();
+             
+             if (result.success) {
+                let newToken = generateSessionToken();
+                localStorage.setItem('tct_session_token', newToken);
+                localStorage.setItem('tct_temp_user', JSON.stringify({ username: authInput.username, password: authInput.password, isNewUser: true }));
+                setAuthMode('packages');
+             } else {
+                setAuthError(result.message);
+             }
+          } 
+          else if (authMode === 'login') {
+             let sessionToken = localStorage.getItem('tct_session_token');
+             if (!sessionToken || isForceLogin) {
+                 sessionToken = generateSessionToken();
+                 localStorage.setItem('tct_session_token', sessionToken);
+             }
+
+             const response = await fetch(slipOkGasUrl, {
+                method: "POST",
+                body: JSON.stringify({ 
+                  action: 'login', 
+                  username: authInput.username, 
+                  password: authInput.password,
+                  sessionToken: sessionToken,
+                  forceLogin: isForceLogin
+                })
+             });
+             const result = await response.json();
+
+             if (result.success) {
+                const userObj = { username: result.username, expiryDate: result.expiryDate };
+                
+                localStorage.setItem('tct_current_user', JSON.stringify(userObj));
+                setIsSubscribed(true);
+                
+                const daysLeft = calculateDaysLeft(userObj.expiryDate);
+                
+                if (daysLeft >= 0) {
+                  setShowAuthModal(false);
+                  setTimeout(() => fileInputRef.current?.click(), 300); 
+                } else {
+                  setAuthMode('packages'); 
+                }
+             } else {
+                setAuthError(result.message);
+                if (result.errorType === 'active_session') {
+                   setShowForceLoginBtn(true);
+                }
+             }
+          }
+        } catch (err) {
+          setAuthError('ไม่สามารถเชื่อมต่อระบบฐานข้อมูลได้ในขณะนี้ กรุณาลองใหม่อีกครั้ง');
+        } finally {
+          setIsScanningUI(false);
+        }
+      };
+
+      const handleSelectPackage = (pkgId) => {
+        setSelectedPackage(pkgId);
+        setPaymentSlip(null); 
+        setQrTimeLeft(300); 
+        setIsQrExpired(false);
+        setAuthMode('qr');
+      };
+
+      const verifyPaymentAutomatically = async () => {
+        if (!paymentSlip) {
+           setAuthError('กรุณาแนบหลักฐานการโอนเงิน (e-Slip) เพื่อดำเนินการตรวจสอบ');
+           return;
+        }
+        
+        setAuthError('');
+        setTimeout(() => setIsScanningUI(true), 50); 
+        showToastMessage('ระบบกำลังตรวจสอบหลักฐานการชำระเงิน...', 'success');
+        
+        try {
+          const base64Data = await compressImage(paymentSlip);
+          const selectedOption = PACKAGE_OPTIONS.find(p => p.id === selectedPackage);
+          const expectedAmount = selectedOption ? selectedOption.price : 0;
+          const monthsToAdd = selectedOption ? selectedOption.months : 1;
+          
+          const tempUser = JSON.parse(localStorage.getItem('tct_temp_user'));
+          const currentUser = getCurrentUser();
+          const targetUser = tempUser || currentUser;
+          
+          if(!targetUser) throw new Error("ไม่พบข้อมูลผู้ใช้งาน");
+
+          const currentToken = localStorage.getItem('tct_session_token');
+
+          const response = await fetch(slipOkGasUrl, {
+              method: "POST",
+              headers: { "Content-Type": "text/plain;charset=utf-8" },
+              body: JSON.stringify({
+                  action: 'verifyPayment',
+                  imageBase64: base64Data,
+                  amount: expectedAmount,
+                  username: targetUser.username,
+                  password: targetUser.password || "", 
+                  isNewUser: tempUser ? true : false,
+                  monthsToAdd: monthsToAdd,
+                  sessionToken: currentToken,
+                  promptpayId: PROMPTPAY_ID 
+              })
+          });
+
+          if (!response.ok) throw new Error("เกิดข้อผิดพลาดในการเชื่อมต่อเซิร์ฟเวอร์ตรวจสอบ");
+
+          const result = await response.json();
+
+          if (result.success === true) {
+             const finalUser = { username: targetUser.username, expiryDate: result.newExpiryDate };
+             localStorage.setItem('tct_current_user', JSON.stringify(finalUser));
+             localStorage.removeItem('tct_temp_user');
+
+             setIsSubscribed(true);
+             setShowAuthModal(false);
+             setShowProfileModal(false); 
+             showToastMessage('ชำระค่าบริการสำเร็จ! ระบบพร้อมใช้งานแล้ว', 'success');
+             
+             setTimeout(() => fileInputRef.current?.click(), 400);
+          } else {
+             setAuthError(result.message || 'หลักฐานการชำระเงินไม่ถูกต้อง หรือข้อมูลไม่ตรงกับแพ็กเกจ');
+             showToastMessage('การตรวจสอบรายการล้มเหลว', 'error');
+          }
+        } catch (err) {
+          setAuthError('เครือข่ายมีปัญหาหรือไม่สามารถเชื่อมต่อระบบตรวจสอบได้ กรุณาลองใหม่อีกครั้ง');
+          showToastMessage('ข้อผิดพลาดทางเครือข่าย', 'error');
+        } finally {
+          setIsScanningUI(false);
+        }
+      };
+
+      const handleFileUpload = async (e) => {
+        if (isScanningRef.current) return;
+        
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        isScanningRef.current = true;
+        setIsScanningUI(true); 
+        
+        try { e.target.value = ''; } catch(err) {} 
+        const fallbackDateObj = new Date(file.lastModified);
+
+        try {
+          const aiData = await analyzeSlipWithGas(file);
+
+          if (!aiData || typeof aiData !== 'object') {
+             throw new Error("ระบบคืนค่าข้อมูลกลับมาไม่ถูกต้อง");
+          }
+
+          if (aiData.isValidSlip === false) {
+             showToastMessage('ภาพนี้ไม่ใช่สลิปโครงการไทยช่วยไทยพลัส', 'error');
+             return;
+          }
+
+          const finalDate = aiData.date || (!isNaN(fallbackDateObj.getTime()) ? `${fallbackDateObj.getFullYear()}-${String(fallbackDateObj.getMonth()+1).padStart(2,'0')}-${String(fallbackDateObj.getDate()).padStart(2,'0')}` : selectedDate);
+          const finalTime = aiData.time || (!isNaN(fallbackDateObj.getTime()) ? `${String(fallbackDateObj.getHours()).padStart(2,'0')}:${String(fallbackDateObj.getMinutes()).padStart(2,'0')}` : selectedTime);
+
+          const isDuplicate = transactions.some(tx => {
+             if (aiData.referenceNo && tx.referenceNo === aiData.referenceNo) return true;
+             if (tx.slipDate === finalDate && tx.slipTime === finalTime && tx.totalValue === aiData.totalAmount) return true;
+             return false;
+          });
+
+          if (isDuplicate) {
+             showToastMessage('สลิปนี้ถูกบันทึกไปแล้ว', 'warning');
+             return;
+          }
+
+          if (aiData.totalAmount != null) setSaveInputValue(String(aiData.totalAmount));
+          
+          if (aiData.govtSubsidy != null && aiData.userPayment != null) {
+            setScannedGovtPays(String(aiData.govtSubsidy));
+            setScannedUserPays(String(aiData.userPayment));
+          }
+
+          if (aiData.referenceNo != null) setScannedRefNo(String(aiData.referenceNo));
+
+          setSelectedDate(finalDate);
+          setSelectedTime(finalTime);
+
+          showToastMessage('ดึงข้อมูลจากสลิปสำเร็จ!', 'success');
+
+        } catch (err) {
+          console.error("Scanner Error:", err);
+          showToastMessage(`${err.message}`, 'error');
+        } finally {
+          isScanningRef.current = false;
+          setIsScanningUI(false);
+        }
       };
 
       const filteredTransactions = transactions.filter(t => {
@@ -362,7 +934,7 @@
           return (
             <div className="text-center py-10">
               <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-3 text-gray-400"><Icons.History /></div>
-              <p className="text-sm text-gray-500 font-medium">ยังไม่มีการบันทึกรายการ</p>
+              <p className="text-sm text-gray-500 font-medium">ไม่มีรายการในประวัติ</p>
             </div>
           );
         }
@@ -375,15 +947,16 @@
                     <div>
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-[9px] font-bold text-white bg-gray-800 px-2 py-0.5 rounded-md">
-                          {formatDisplayTimeObj(new Date(tx.timestamp))}
+                          {tx.slipTime || formatDisplayTimeObj(new Date(tx.timestamp))}
                         </span>
+                        {tx.inputType === 'ai_vision' && <span className="text-[8px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded-md flex items-center gap-0.5"><Icons.DocumentCheck className="w-2.5 h-2.5"/> สลิป</span>}
                       </div>
-                      <p className="text-xs font-bold text-gray-800 mb-0.5">จำนวนเงินรวม ฿{formatNumber(tx.totalValue)}</p>
+                      <p className="text-[11px] font-bold text-gray-800 mb-0.5">รวม {formatNumber(tx.totalValue)} บาท</p>
                       <p className="text-[10px] text-gray-500 font-medium">
-                        เป๋าตัง ฿{formatNumber(tx.userPays)} | รัฐช่วย <span className="text-emerald-600 font-bold">฿{formatNumber(tx.govtPays)}</span>
+                        G-Wallet {formatNumber(tx.userPays)} บาท | สิทธิไทยช่วยไทยพลัส <span className="text-[#2b9e57] font-bold">{formatNumber(tx.govtPays)} บาท</span>
                       </p>
                     </div>
-                    <button onClick={() => handleDelete(tx.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition active:scale-95" aria-label="ลบรายการ">
+                    <button onClick={() => setDeleteConfirmId(tx.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition active:scale-95" aria-label="ลบรายการ">
                       <Icons.Trash />
                     </button>
                   </div>
@@ -413,15 +986,16 @@
                           <div>
                             <div className="flex items-center gap-2 mb-1">
                               <span className="text-[9px] font-bold text-white bg-gray-800 px-2 py-0.5 rounded-md">
-                                {formatDisplayTimeObj(new Date(tx.timestamp))}
+                                {tx.slipTime || formatDisplayTimeObj(new Date(tx.timestamp))}
                               </span>
+                              {tx.inputType === 'ai_vision' && <span className="text-[8px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-1.5 py-0.5 rounded-md flex items-center gap-0.5"><Icons.DocumentCheck className="w-2.5 h-2.5"/> สลิป</span>}
                             </div>
-                            <p className="text-xs font-bold text-gray-800 mb-0.5">จำนวนเงินรวม ฿{formatNumber(tx.totalValue)}</p>
+                            <p className="text-[11px] font-bold text-gray-800 mb-0.5">รวม {formatNumber(tx.totalValue)} บาท</p>
                             <p className="text-[10px] text-gray-500 font-medium">
-                              เป๋าตัง ฿{formatNumber(tx.userPays)} | รัฐช่วย <span className="text-emerald-600 font-bold">฿{formatNumber(tx.govtPays)}</span>
+                              G-Wallet {formatNumber(tx.userPays)} บาท | สิทธิไทยช่วยไทยพลัส <span className="text-[#2b9e57] font-bold">{formatNumber(tx.govtPays)} บาท</span>
                             </p>
                           </div>
-                          <button onClick={() => handleDelete(tx.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition active:scale-95" aria-label="ลบรายการ">
+                          <button onClick={() => setDeleteConfirmId(tx.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition active:scale-95" aria-label="ลบรายการ">
                             <Icons.Trash />
                           </button>
                         </div>
@@ -470,8 +1044,8 @@
                          </div>
                          <div className="flex items-center gap-3">
                            <div className="flex flex-col items-end">
-                             <span className="text-[10px] font-bold text-gray-500">รัฐช่วย</span>
-                             <span className="text-xs font-black text-emerald-600">฿{formatNumber(monthGovt)}</span>
+                             <span className="text-[10px] font-bold text-gray-500">สิทธิไทยช่วยไทยพลัส</span>
+                             <span className="text-xs font-black text-[#2b9e57]">{formatNumber(monthGovt)} บาท</span>
                            </div>
                            <div className={`text-gray-400 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`}>
                              <Icons.ChevronDown />
@@ -492,15 +1066,16 @@
                                       <div>
                                         <div className="flex items-center gap-2 mb-1">
                                           <span className="text-[9px] font-bold text-white bg-gray-600 px-1.5 py-0.5 rounded">
-                                            {formatDisplayTimeObj(new Date(tx.timestamp))}
+                                            {tx.slipTime || formatDisplayTimeObj(new Date(tx.timestamp))}
                                           </span>
+                                          {tx.inputType === 'ai_vision' && <span className="text-[8px] ml-1 font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-1 py-0.5 rounded-md flex items-center gap-0.5"><Icons.DocumentCheck className="w-2.5 h-2.5"/> สลิป</span>}
                                         </div>
-                                        <p className="text-[11px] font-bold text-gray-800 mb-0.5">รวม ฿{formatNumber(tx.totalValue)}</p>
+                                        <p className="text-[11px] font-bold text-gray-800 mb-0.5">รวม {formatNumber(tx.totalValue)} บาท</p>
                                         <p className="text-[9px] text-gray-500 font-medium">
-                                          เป๋าตัง ฿{formatNumber(tx.userPays)} | <span className="text-emerald-600">รัฐ ฿{formatNumber(tx.govtPays)}</span>
+                                          G-Wallet {formatNumber(tx.userPays)} บาท | <span className="text-[#2b9e57] font-bold">สิทธิไทยช่วยไทยพลัส {formatNumber(tx.govtPays)} บาท</span>
                                         </p>
                                       </div>
-                                      <button onClick={() => handleDelete(tx.id)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition" aria-label="ลบรายการ">
+                                      <button onClick={() => setDeleteConfirmId(tx.id)} className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded transition" aria-label="ลบรายการ">
                                         <Icons.Trash />
                                       </button>
                                     </div>
@@ -518,160 +1093,548 @@
         }
       };
 
+      const renderProfileStatus = () => {
+         const user = getCurrentUser();
+         if (!user) return null;
+
+         const daysLeft = calculateDaysLeft(user.expiryDate);
+
+         if (daysLeft < 0) {
+            return (
+               <div>
+                  <span className="inline-flex items-center gap-1 bg-red-100 text-red-700 text-[10px] font-bold px-2 py-0.5 rounded-md mb-1">
+                     <Icons.XCircle className="w-3 h-3"/> สถานะ: แพ็กเกจหมดอายุ
+                  </span>
+                  <p className="text-[11px] font-bold text-gray-800 mt-1">กรุณาต่ออายุแพ็กเกจเพื่อใช้งานระบบต่อ</p>
+                  <button onClick={(e) => { e.preventDefault(); openAuthModalSafe('packages'); }} className="mt-3 w-full py-2 bg-indigo-600 text-white text-xs font-bold rounded-lg shadow-sm hover:bg-indigo-700 active:scale-95">ต่ออายุการใช้งานแพ็กเกจ</button>
+               </div>
+            );
+         } else if (daysLeft >= 0 && daysLeft <= 3) {
+            return (
+               <div>
+                  <span className="inline-flex items-center gap-1 bg-orange-100 text-orange-700 text-[10px] font-bold px-2 py-0.5 rounded-md mb-1">
+                     <Icons.AlertCircle className="w-3 h-3"/> สถานะ: ใกล้หมดอายุ (เหลือ {daysLeft} วัน)
+                  </span>
+                  <p className="text-[11px] font-bold text-gray-800 mt-1">ใช้งานได้ถึงวันที่: {new Date(user.expiryDate).toLocaleDateString('th-TH')}</p>
+                  <button onClick={(e) => { e.preventDefault(); openAuthModalSafe('packages'); }} className="mt-3 w-full py-2 bg-indigo-600 text-white text-xs font-bold rounded-lg shadow-sm hover:bg-indigo-700 active:scale-95">ต่ออายุล่วงหน้า</button>
+               </div>
+            );
+         } else {
+            return (
+               <div>
+                  <span className="inline-flex items-center gap-1 bg-green-100 text-green-700 text-[10px] font-bold px-2 py-0.5 rounded-md mb-1">
+                     <Icons.Check className="w-3 h-3"/> สถานะ: ใช้งานได้ปกติ
+                  </span>
+                  <p className="text-[11px] font-bold text-gray-800 mt-1">ใช้งานได้ถึงวันที่: {new Date(user.expiryDate).toLocaleDateString('th-TH')}</p>
+                  <button onClick={(e) => { e.preventDefault(); openAuthModalSafe('packages'); }} className="mt-3 w-full py-2 bg-gray-100 text-gray-600 text-xs font-bold rounded-lg shadow-sm hover:bg-gray-200 active:scale-95">ต่ออายุการใช้งานแพ็กเกจ</button>
+               </div>
+            );
+         }
+      };
+
       return (
-        <div className="flex justify-center items-center h-[100dvh] w-full select-none overflow-hidden relative">
+        <div className="flex justify-center items-center h-[100dvh] w-screen max-w-[100vw] select-none overflow-hidden bg-gray-200 font-sans relative">
           
-          {showToast && (
-            <div className="absolute top-12 left-0 right-0 z-[60] flex justify-center animate-slide-down px-4 pointer-events-none">
-              <div className="bg-gray-800/95 backdrop-blur-md text-white px-6 py-3.5 rounded-full shadow-2xl flex items-center justify-center gap-3 w-auto max-w-[90%] border border-gray-700/50">
-                <div className="bg-emerald-500 rounded-full p-1 flex-shrink-0 text-white shadow-sm"><Icons.Check /></div>
-                <span className="text-[13px] sm:text-sm font-bold tracking-wide break-words">{toastMsg}</span>
+          {toastData.show && (
+            <div className="absolute top-8 left-0 right-0 z-[60] flex justify-center animate-slide-down px-4 pointer-events-none">
+              <div className={`backdrop-blur-md text-white px-5 py-2.5 rounded-full shadow-lg flex items-center justify-center gap-2 max-w-[90%] border ${toastData.type === 'error' ? 'bg-red-600/95 border-red-700/50' : 'bg-gray-800/95 border-gray-700/50'}`}>
+                <span className="text-xs sm:text-sm font-bold">{toastData.msg}</span>
               </div>
             </div>
           )}
 
-          <div className="w-full max-w-[420px] h-[100dvh] sm:h-[100dvh] sm:max-h-[850px] bg-gray-50 flex flex-col sm:rounded-[2.5rem] sm:border-[8px] sm:border-gray-900 shadow-2xl relative overflow-hidden">
+          <div className="w-full max-w-[420px] h-[100dvh] bg-[#f8fafc] flex flex-col shadow-2xl relative overflow-hidden sm:max-h-[850px] sm:rounded-3xl sm:border-[6px] sm:border-gray-900">
             
-            <div className="shrink-0 pt-3 sm:pt-4 pb-2.5 px-4 bg-white border-b border-gray-100 flex flex-col items-center justify-center relative z-10">
-              
-              <button onClick={() => setShowHistory(true)} className="absolute top-4 sm:top-5 right-4 px-2.5 py-1.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition active:scale-95 border border-gray-200 shadow-sm z-20 flex items-center gap-1">
-                <Icons.History />
-                <span className="text-[10px] sm:text-[11px] font-bold">ประวัติ</span>
-                {todaysTransactions.length > 0 && <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white border border-white">{todaysTransactions.length}</span>}
-              </button>
+            {/* 🔵 พื้นหลังสีฟ้าด้านบน (โค้ง) */}
+            <div className="absolute top-0 left-0 right-0 h-[18%] bg-[#3b82f6] rounded-b-[2rem] z-0"></div>
 
-              <img src="https://media.thaigov.go.th/l3qDHmrj2DNjiur-keUFOlaI2fk=/https://www.thaigov.go.th/uploads/images/275/2026/05/png/20260526091533_3759.png" alt="โลโก้ ไทยช่วยไทยพลัส" className="h-8 sm:h-10 w-auto object-contain mb-2" />
-              
-              <div className="w-full flex flex-col gap-1">
-                <div className="w-full flex gap-1.5">
-                  <div className="flex-1 bg-emerald-50 rounded-lg p-2 border border-emerald-100/50 flex flex-col justify-center">
-                    <div className="flex justify-between items-end mb-1">
-                      <span className="text-[10px] font-bold text-emerald-800">สิทธิรายวันคงเหลือ</span>
-                      <span className="text-xs font-black text-emerald-600">{formatNumber(remainingQuota)} / 200 ฿</span>
-                    </div>
-                    <div className="w-full bg-emerald-200/50 h-1.5 rounded-full overflow-hidden mb-1">
-                      <div className="h-full bg-emerald-500 transition-all duration-500 rounded-full" style={{ width: `${(usedQuotaToday / MAX_GOVT_SUBSIDY) * 100}%` }}></div>
-                    </div>
-                    <p className="text-[9px] font-semibold text-emerald-700 text-center">ใช้จ่ายได้อีกสูงสุด <span className="text-emerald-900 font-bold">{formatNumber(maxPurchasingPower)} ฿</span></p>
-                  </div>
-
-                  <button onClick={openSaveModal} disabled={remainingQuota === 0} className={`shrink-0 w-[64px] rounded-lg flex flex-col items-center justify-center transition-all border ${remainingQuota > 0 ? 'bg-gradient-to-b from-blue-500 to-blue-600 border-blue-700 text-white shadow-sm active:scale-95' : 'bg-gray-100 border-gray-200 text-gray-400 pointer-events-none'}`}>
-                    <Icons.Pen /><span className="text-[10px] font-bold mt-0.5">จดบันทึก</span>
-                  </button>
-                </div>
-
-                <div className="w-full bg-indigo-50 rounded-lg p-2 border border-indigo-100/50">
-                  <div className="flex justify-between items-end mb-1">
-                    <span className="text-[10px] font-bold text-indigo-800">รายเดือนคงเหลือ (1,000 ฿)</span>
-                    <span className="text-xs font-black text-indigo-600">{formatNumber(remainingMonthlyQuota)} ฿</span>
-                  </div>
-                  <div className="w-full bg-indigo-200/50 h-1.5 rounded-full overflow-hidden mb-1.5">
-                    <div className="h-full bg-indigo-500 transition-all duration-500 rounded-full" style={{ width: `${(usedQuotaMonth / MAX_MONTHLY_SUBSIDY) * 100}%` }}></div>
-                  </div>
-                  <div className="flex justify-between items-end mb-0.5">
-                    <span className="text-[9px] font-bold text-gray-500">สิทธิรวมตลอดโครงการ (4,000 ฿)</span>
-                    <span className="text-[9px] font-bold text-gray-600">เหลือ {formatNumber(remainingTotalQuota)} ฿</span>
-                  </div>
-                  <div className="w-full bg-gray-200 h-1 rounded-full overflow-hidden">
-                    <div className="h-full bg-gray-400 transition-all duration-500 rounded-full" style={{ width: `${(totalUsed / MAX_TOTAL_SUBSIDY) * 100}%` }}></div>
-                  </div>
-                </div>
+            {/* ส่วน Header (ปุ่ม Profile) */}
+            <div className="w-full pt-4 pb-1 px-4 flex justify-between items-center z-10 shrink-0">
+              <img src="https://img2.pic.in.th/-85_20260607183516.png" alt="โลโก้ไทยช่วยไทย" className="h-14 sm:h-16 w-auto object-contain drop-shadow-sm" />
+              <div className="flex gap-1.5">
+                <button onClick={() => { setHistoryFilter('today'); setShowHistory(true); }} className="flex items-center gap-1 bg-white text-gray-700 px-2.5 py-1.5 rounded-xl shadow-sm text-[10px] font-bold active:scale-95">
+                  <Icons.Clock className="w-3 h-3" /> ประวัติ
+                </button>
+                <button onClick={openSaveModal} className="flex items-center gap-1 bg-white text-gray-700 px-2.5 py-1.5 rounded-xl shadow-sm text-[10px] font-bold active:scale-95">
+                  <Icons.Bookmark className="w-3 h-3" /> บันทึก
+                </button>
+                <button onClick={() => setShowProfileModal(true)} className="flex items-center justify-center bg-indigo-50 text-indigo-600 px-2 py-1.5 rounded-xl shadow-sm border border-indigo-100 active:scale-95">
+                  <Icons.UserCircle className="w-[18px] h-[18px]" />
+                </button>
               </div>
             </div>
 
-            <div className="flex-1 flex flex-col px-4 py-2 justify-between overflow-hidden relative">
-              <div className="shrink-0 flex rounded-lg bg-gray-200/80 p-1 mb-2">
-                <button onClick={() => changeTab('budget')} className={`flex-1 flex flex-col items-center justify-center py-1.5 gap-1 rounded-md transition-all ${getTabColor('budget')}`}>
-                  <Icons.Wallet /><span className="text-[10px] font-bold">จำนวนเงิน</span>
+            {/* 📜 Content หลัก */}
+            <div className="flex-1 flex flex-col px-4 pb-1 z-10 gap-1.5 overflow-hidden no-scrollbar">
+              
+              {/* Card 1: สิทธิวันนี้คงเหลือ */}
+              <div className="shrink-0 rounded-2xl p-4 shadow-sm relative flex flex-col justify-center min-h-[95px] bg-cover bg-center border border-green-100" 
+                   style={{ backgroundImage: "url('https://img2.pic.in.th/FC981FAA-0FA9-47B7-8F6E-D630431C0577.jpeg')", backgroundColor: '#f0fdf4' }}>
+                <div className="relative z-10">
+                  <div className="flex items-center gap-1 text-gray-600 mb-0.5">
+                    <span className="text-[10px] font-bold">สิทธิวันนี้คงเหลือ</span>
+                    <Icons.Info className="w-3.5 h-3.5 text-gray-400" />
+                  </div>
+                  <div className="flex items-baseline mb-0.5">
+                    <span className="text-lg font-bold text-[#2b9e57] mr-1">฿</span>
+                    <span className="text-3xl leading-none font-black text-[#2b9e57] tracking-tight">{formatNumber(remainingQuota)}</span>
+                  </div>
+                  <div className="text-[9px] text-gray-600 font-medium mt-1">
+                    ใช้จ่ายได้สูงสุด <span className="text-[#2b9e57] font-bold">฿ {formatNumber(maxPurchasingPower)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2: สิทธิเดือนนี้ */}
+              <div className="shrink-0 bg-white rounded-2xl p-3 shadow-sm border border-gray-100 flex flex-col justify-between">
+                <div>
+                  <div className="flex justify-between items-start mb-0.5">
+                    <span className="text-[10px] font-bold text-gray-700">สิทธิเดือนนี้ (1 - {lastDayOfMonth} {shortMonthName})</span>
+                  </div>
+                  <div className="flex items-baseline mb-1.5">
+                    <span className="text-lg font-bold text-[#2563eb] mr-1">฿</span>
+                    <span className="text-2xl font-black text-[#2563eb]">{formatNumber(remainingMonthlyQuota)}</span>
+                    <span className="text-[9px] font-bold text-[#2563eb] ml-2">คงเหลือ</span>
+                  </div>
+                  
+                  {/* Progress Bar (เดือนนี้) */}
+                  <div className="w-full bg-[#f1f5f9] h-1.5 rounded-full overflow-hidden mb-1">
+                    <div className="h-full bg-[#2563eb] rounded-full" style={{ width: `${(usedQuotaMonth / MAX_MONTHLY_SUBSIDY) * 100}%` }}></div>
+                  </div>
+                  <div className="flex justify-between text-[9px] text-gray-500 font-medium">
+                    <span>ใช้ไป ฿ {formatNumber(usedQuotaMonth)}</span>
+                    <span>เหลือ ฿ {formatNumber(remainingMonthlyQuota)} / ฿ {formatNumber(MAX_MONTHLY_SUBSIDY)}</span>
+                  </div>
+                </div>
+
+                {/* สิทธิรวมตลอดโครงการ */}
+                <div onClick={() => { setHistoryFilter('all'); setShowHistory(true); }} className="mt-2 bg-[#f8fafc] rounded-xl p-2 flex flex-col gap-1.5 border border-[#f1f5f9] cursor-pointer hover:bg-gray-50 active:scale-[0.98] transition-transform">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="bg-[#eff6ff] p-1.5 rounded-full text-[#2563eb]">
+                        <Icons.Coins className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-gray-700">สิทธิรวมตลอดโครงการ</span>
+                        <span className="text-[8px] text-gray-500">เหลือ ฿ {formatNumber(remainingTotalQuota)} จาก ฿ {formatNumber(MAX_TOTAL_SUBSIDY)}</span>
+                      </div>
+                    </div>
+                    <Icons.ChevronRight className="w-3 h-3 text-[#2563eb]" />
+                  </div>
+                  <div className="w-full bg-[#e2e8f0] h-1 rounded-full overflow-hidden">
+                    <div className="h-full bg-[#2563eb] rounded-full" style={{ width: `${(totalUsed / MAX_TOTAL_SUBSIDY) * 100}%` }}></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Tabs */}
+              <div className="shrink-0 flex bg-white rounded-xl shadow-sm border border-gray-100 p-1">
+                <button onClick={() => changeTab('budget')} className={`flex-1 py-1.5 flex items-center justify-center gap-1.5 rounded-lg text-[10px] font-bold transition-colors ${activeTab === 'budget' ? 'bg-[#2563eb] text-white shadow-md' : 'text-gray-500 bg-transparent'}`}>
+                  <Icons.Wallet className="w-3 h-3" /> จำนวนเงิน
                 </button>
-                <button onClick={() => changeTab('price')} className={`flex-1 flex flex-col items-center justify-center py-1.5 gap-1 rounded-md transition-all ${getTabColor('price')}`}>
-                  <Icons.Tag /><span className="text-[10px] font-bold">ราคาสินค้า</span>
+                <button onClick={() => changeTab('price')} className={`flex-1 py-1.5 flex items-center justify-center gap-1.5 rounded-lg text-[10px] font-bold transition-colors ${activeTab === 'price' ? 'bg-[#2563eb] text-white shadow-md' : 'text-gray-500 bg-transparent'}`}>
+                  <Icons.Tag className="w-3 h-3" /> ราคาสินค้า
                 </button>
-                <button onClick={() => changeTab('quota')} className={`flex-1 flex flex-col items-center justify-center py-1.5 gap-1 rounded-md transition-all ${getTabColor('quota')}`}>
-                  <Icons.Target /><span className="text-[10px] font-bold">สิทธิที่เหลือ</span>
+                <button onClick={() => changeTab('quota')} className={`flex-1 py-1.5 flex items-center justify-center gap-1.5 rounded-lg text-[10px] font-bold transition-colors ${activeTab === 'quota' ? 'bg-[#2563eb] text-white shadow-md' : 'text-gray-500 bg-transparent'}`}>
+                  <Icons.Target className="w-3 h-3" /> สิทธิที่เหลือ
                 </button>
               </div>
 
-              <div className="flex-1 min-h-[70px] max-h-[110px] flex flex-col items-center justify-center bg-white rounded-xl border border-gray-100 shadow-sm relative my-1.5">
-                <label className="text-[11px] sm:text-xs font-bold text-gray-400 mb-1 sm:mb-2 uppercase tracking-wider">
+              {/* กล่องกรอกตัวเลข ในหน้าหลัก */}
+              <div className="shrink-0 bg-white rounded-2xl p-2.5 shadow-sm border border-gray-100 flex flex-col justify-center relative">
+                <label className="text-[10px] font-bold text-gray-600 mb-1.5">
                   {activeTab === 'budget' && 'กรอกจำนวนเงินของคุณ (บาท)'}
                   {activeTab === 'price' && 'กรอกราคาสินค้า (บาท)'}
                   {activeTab === 'quota' && 'กรอกสิทธิรัฐที่เหลืออยู่ (บาท)'}
                 </label>
+                <div className="flex items-center bg-white border border-gray-200 rounded-xl px-3 py-1.5 relative overflow-hidden">
+                  <span className="text-gray-400 font-bold mr-2 text-sm shrink-0">฿</span>
+                  <input 
+                    ref={inputRef} 
+                    type="text" 
+                    inputMode="decimal" 
+                    value={inputValue} 
+                    onChange={handleInputChange} 
+                    className="w-full text-2xl font-black text-gray-800 bg-transparent focus:outline-none pr-8" 
+                    placeholder="0" 
+                  />
+                  {inputValue && (
+                    <button 
+                      type="button"
+                      onMouseDown={(e) => e.preventDefault()}
+                      onTouchStart={(e) => e.preventDefault()}
+                      onClick={clearInput} 
+                      className="absolute right-3 flex-shrink-0 bg-gray-300 hover:bg-gray-400 text-white rounded-full flex items-center justify-center w-5 h-5 transition-colors z-10 active:scale-95"
+                    >
+                      <Icons.X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* สรุปรายการ */}
+              <div className="shrink-0 bg-white rounded-2xl p-3 shadow-sm border border-gray-100 flex flex-col justify-center">
+                <h3 className="text-[10px] font-bold text-gray-800 mb-2">สรุปรายการ</h3>
                 
-                <div className="relative w-full flex justify-center items-center px-6">
-                  <span className="text-xl sm:text-2xl font-bold text-gray-300 mr-2">฿</span>
-                  <input ref={inputRef} type="text" inputMode="decimal" value={inputValue} onChange={handleInputChange} className="w-full max-w-[180px] text-center text-4xl sm:text-5xl font-black text-gray-800 bg-transparent focus:outline-none placeholder-gray-200 p-0" placeholder="0" />
-                  {inputValue && <button onClick={clearInput} className="absolute right-4 bg-gray-100 hover:bg-gray-200 text-gray-500 rounded-full p-1.5 transition-colors"><Icons.X /></button>}
+                <div className="flex justify-between items-start mb-1.5">
+                  <div className="flex items-start gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#2563eb] mt-1"></div>
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-bold text-gray-700">คุณจ่ายเอง (40%)</span>
+                      <span className="text-[8px] text-[#2563eb]">G-Wallet</span>
+                    </div>
+                  </div>
+                  <span className="text-[13px] font-bold text-[#2563eb]">฿ {formatNumber(calcResult.userPays)}</span>
+                </div>
+
+                <div className="flex justify-between items-start mb-1.5">
+                  <div className="flex items-start gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-[#2b9e57] mt-1"></div>
+                    <div className="flex flex-col">
+                      <span className="text-[10px] font-bold text-gray-700">รัฐช่วยจ่าย (60%)</span>
+                      <span className="text-[8px] text-gray-500">สิทธิไทยช่วยไทยพลัส</span>
+                    </div>
+                  </div>
+                  <span className="text-[13px] font-bold text-[#2b9e57]">฿ {formatNumber(calcResult.govtPays)}</span>
+                </div>
+
+                <div className="border-t border-gray-100 my-1.5"></div>
+
+                <div className="flex justify-between items-start">
+                  <div className="flex flex-col">
+                    <span className="text-[10px] font-bold text-gray-800">จำนวนเงินรวม</span>
+                    {/* ซ่อน label หากยังไม่ได้พิมพ์ เพื่อความสะอาดตา */}
+                    {calcResult.quotaLabel && (
+                      <span className="text-[8px] text-gray-500">{calcResult.quotaLabel}</span>
+                    )}
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="text-sm font-black text-gray-800">฿ {formatNumber(calcResult.totalValue)}</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="shrink-0 bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-gray-100 opacity-90">
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center bg-blue-50/50 p-2 rounded-lg border border-blue-100/50">
-                    <div className="flex flex-col"><span className="text-[11px] sm:text-xs font-bold text-blue-900">1. เราจ่ายเอง (40%)</span><span className="text-[9px] sm:text-[10px] text-blue-500 font-medium">หักจากแอปเป๋าตัง</span></div>
-                    <span className={`text-base sm:text-lg font-black ${inputValue ? 'text-blue-600' : 'text-blue-300'}`}>{formatNumber(calcResult.userPays)}</span>
-                  </div>
-                  <div className="flex justify-between items-center bg-green-50/50 p-2 rounded-lg border border-green-100/50">
-                    <div className="flex flex-col"><span className="text-[11px] sm:text-xs font-bold text-green-900">2. รัฐช่วยจ่าย (60%)</span><span className="text-[9px] sm:text-[10px] text-green-500 font-medium">ใช้โควตารายวัน</span></div>
-                    <span className={`text-base sm:text-lg font-black ${inputValue ? 'text-green-600' : 'text-green-300'}`}>+{formatNumber(calcResult.govtPays)}</span>
-                  </div>
-                  <div className="border-t border-dashed border-gray-100 my-1"></div>
-                  <div className="flex justify-between items-end pt-0.5">
-                    <span className="text-xs sm:text-sm font-extrabold text-gray-800">จำนวนเงินรวม</span>
-                    <span className={`text-xl sm:text-2xl font-black ${inputValue ? 'text-gray-800' : 'text-gray-300'}`}>฿ {formatNumber(calcResult.totalValue)}</span>
-                  </div>
-                  <div className="pt-1.5 border-t border-gray-100 mt-1.5">
-                    <div className="flex justify-between text-[9px] sm:text-[10px] font-bold text-gray-400 mb-1">
-                      <span>ใช้โควตารัฐ (200 บ.)</span>
-                      <span className={calcResult.isMaxReached ? 'text-orange-500' : (inputValue ? 'text-green-500' : 'text-gray-300')}>{calcResult.isMaxReached ? 'เต็ม 200 ฿' : `${formatNumber(calcResult.govtPays)} / 200 ฿`}</span>
-                    </div>
-                    <div className="w-full bg-gray-100 h-1.5 rounded-full overflow-hidden">
-                      <div className={`h-full transition-all duration-300 ${!inputValue ? 'bg-transparent' : (calcResult.isMaxReached ? 'bg-orange-400' : 'bg-green-400')}`} style={{ width: `${calcResult.quotaPercent}%` }}></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              {/* ⚠️ แถบแจ้งเตือนเกินโควตา */}
+              {calcResult.isMaxReached && activeTab !== 'quota' && (
+                 <div className="shrink-0 flex items-start gap-2 p-2 bg-orange-50 rounded-xl border border-orange-200 shadow-sm mt-0.5 mb-1">
+                   <Icons.AlertCircle className="text-orange-500 flex-shrink-0 w-3.5 h-3.5 mt-0.5" />
+                   <p className="text-[9px] text-orange-800 font-medium leading-tight">
+                     ยอดใช้จ่ายที่เกินวงเงินสนับสนุนจากภาครัฐ 200 บาท/วัน ผู้ใช้สิทธิจะต้องจ่ายส่วนที่เกินทั้งหมด
+                   </p>
+                 </div>
+              )}
 
-              <div className="shrink-0 min-h-[64px] mt-2 w-full">
-                {calcResult.isMaxReached && activeTab !== 'quota' && (
-                   <div className="flex items-start gap-2.5 p-3 bg-orange-50 rounded-xl border border-orange-200 shadow-sm h-auto min-h-min">
-                     <Icons.AlertCircle className="text-orange-500 flex-shrink-0 w-4 h-4 sm:w-5 sm:h-5 mt-0.5" />
-                     <p className="text-[10px] sm:text-[11px] text-orange-800 font-medium leading-relaxed">
-                       {activeTab === 'budget' && 'เติมเงินได้สูงสุด 133.33 บาทต่อวัน เพื่อใช้สิทธิ์สนับสนุนจากภาครัฐ 200บาท/วัน หากเติมเกิน ยอดส่วนที่เกินจะถูกเก็บเป็นยอดคงเหลือสำหรับนำไปใช้สิทธิ์ในวันหรือเดือนถัดไป'}
-                       {activeTab === 'price' && 'ยอดใช้จ่ายที่เกินวงเงินสนับสนุนจากภาครัฐ 200 บาท/วัน ผู้ใช้สิทธิ์จะต้องจ่ายส่วนที่เกินทั้งหมด'}
-                     </p>
-                   </div>
-                )}
-              </div>
             </div>
 
-            <div className="shrink-0 bg-white border-t-2 border-gray-100 px-4 pt-2.5 pb-safe z-10 shadow-[0_-10px_20px_rgba(0,0,0,0.02)]">
-              <div className="flex items-center justify-between gap-3 min-h-[50px] sm:min-h-[55px]">
-                <div className="flex flex-col">
-                  <span className="text-[9px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-wide mb-0.5">
-                    {activeTab === 'budget' && 'ใช้จ่ายได้ทั้งหมด'}
-                    {activeTab === 'price' && 'จำนวนเงินที่ต้องจ่ายเอง'}
-                    {activeTab === 'quota' && 'ใช้จ่ายได้สูงสุด'}
+            {/* แถบด้านล่างสุด */}
+            <div className="shrink-0 bg-white border-t border-gray-100 px-4 py-2 pb-safe z-20 flex justify-between items-center shadow-[0_-4px_15px_rgba(0,0,0,0.03)] h-[65px]">
+              <div className="flex flex-col">
+                <span className="text-[9px] font-bold text-[#2563eb]">
+                  {activeTab === 'budget' && 'ใช้จ่ายได้ทั้งหมด'}
+                  {activeTab === 'price' && 'จำนวนเงินที่ต้องจ่ายเอง'}
+                  {activeTab === 'quota' && 'ใช้จ่ายได้สูงสุด'}
+                </span>
+                <div className="flex items-baseline">
+                  <span className="text-base font-bold text-[#2563eb] mr-1">฿</span>
+                  <span className="text-xl font-black text-[#2563eb]">
+                    {inputValue ? (activeTab === 'price' ? formatNumber(calcResult.userPays) : formatNumber(calcResult.totalValue)) : '0.00'}
                   </span>
-                  <div className="flex items-baseline">
-                    <span className={`text-lg font-bold mr-1 ${inputValue ? 'text-gray-800' : 'text-gray-300'}`}>฿</span>
-                    <span className={`text-2xl sm:text-3xl font-black tracking-tight ${inputValue ? (activeTab === 'price' ? 'text-blue-600' : 'text-gray-800') : 'text-gray-300'}`}>
-                      {inputValue ? (activeTab === 'price' ? formatNumber(calcResult.userPays) : formatNumber(calcResult.totalValue)) : '0'}
-                    </span>
-                  </div>
                 </div>
-                <a href={paotangDeepLink} className="h-10 sm:h-12 px-4 sm:px-5 rounded-xl flex items-center justify-center transition-all bg-gray-800 text-white hover:bg-gray-700 active:scale-95">
-                  <span className="text-sm font-bold whitespace-nowrap">เปิดแอปเป๋าตัง</span>
-                </a>
               </div>
+              <a href={paotangDeepLink} className="h-10 px-4 rounded-xl flex items-center justify-center gap-1.5 transition-all bg-[#2563eb] text-white hover:bg-blue-700 active:scale-95 shadow-md">
+                <img 
+                  src="https://img1.pic.in.th/images/IMG_3355f76331bf6236f5f4.png" 
+                  alt="Paotang" 
+                  className="w-5 h-5 object-contain rounded"
+                  onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                />
+                <div className="w-5 h-5 bg-white rounded flex items-center justify-center overflow-hidden hidden">
+                  <span className="text-[6px] font-black text-blue-600">เป๋าตัง</span>
+                </div>
+                <span className="text-[11px] font-bold">เปิดแอปเป๋าตัง</span>
+              </a>
             </div>
 
+            {/* =========================================
+                MODALS SECTION 
+            ========================================= */}
+
+            {/* 👤 Modal: หน้าดูข้อมูลบัญชีผู้ใช้งาน */}
+            {showProfileModal && (
+               <div className="absolute inset-0 z-[60] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-5" onClick={() => setShowProfileModal(false)}>
+                  <div className="bg-white rounded-[1.5rem] p-5 w-full max-w-[320px] shadow-2xl animate-slide-up relative border border-gray-100" onClick={(e) => e.stopPropagation()}>
+                     <button onClick={() => setShowProfileModal(false)} className="absolute top-4 right-4 p-1.5 bg-gray-100 rounded-full text-gray-500 active:scale-95 z-10">
+                       <Icons.X className="w-4 h-4" />
+                     </button>
+                     
+                     <h3 className="text-lg font-black text-gray-800 mb-2 text-center">ข้อมูลบัญชีผู้ใช้งาน</h3>
+                     
+                     {getCurrentUser() ? (
+                        <div className="text-center">
+                           <p className="text-base font-black text-indigo-600 mt-2">@{getCurrentUser().username}</p>
+                           
+                           <div className="mt-4 bg-gray-50 rounded-xl p-3 border border-gray-200 text-left">
+                              {renderProfileStatus()}
+                           </div>
+
+                           <button onClick={(e) => { e.preventDefault(); handleLogout(); }} disabled={isScanningUI} className={`mt-4 w-full py-2.5 bg-red-50 text-red-500 font-bold text-xs rounded-xl flex justify-center items-center transition-all ${isScanningUI ? 'opacity-50 pointer-events-none' : 'hover:bg-red-100 active:scale-95'}`}>
+                             {isScanningUI ? <Icons.Loader className="w-4 h-4" /> : 'ออกจากระบบ (Logout)'}
+                           </button>
+                        </div>
+                     ) : (
+                        <div className="text-center py-2">
+                           <p className="text-[11px] text-gray-500 font-medium mb-4 mt-2">กรุณาเข้าสู่ระบบหรือลงทะเบียนเพื่อจัดการแพ็กเกจการใช้งาน</p>
+                           <button onClick={(e) => { e.preventDefault(); openAuthModalSafe('login'); }} className="w-full py-3 bg-indigo-600 text-white font-bold text-xs rounded-xl hover:bg-indigo-700 transition active:scale-95 shadow-lg shadow-indigo-500/30">
+                             เข้าสู่ระบบ / ลงทะเบียน
+                           </button>
+                        </div>
+                     )}
+                  </div>
+               </div>
+            )}
+
+            {/* 🛡️ Modal: ระบบบัญชี (Login/Register/Packages/QR) */}
+            {showAuthModal && (
+              <div className="absolute inset-0 z-[60] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm px-5" onClick={() => setShowAuthModal(false)}>
+                 <div className="bg-white rounded-[1.5rem] p-5 w-full max-w-[340px] shadow-2xl animate-slide-up relative border border-gray-100 max-h-[90vh] overflow-y-auto no-scrollbar" onClick={(e) => e.stopPropagation()}>
+                    
+                    <button onClick={() => setShowAuthModal(false)} className="absolute top-4 right-4 p-1.5 bg-gray-100 rounded-full text-gray-500 active:scale-95 z-10">
+                      <Icons.X className="w-4 h-4" />
+                    </button>
+
+                    {/* หน้า เข้าสู่ระบบ (Login) */}
+                    {authMode === 'login' && (
+                      <div className="text-center pt-2">
+                        <h3 className="text-lg font-black text-gray-800 mb-1">เข้าสู่ระบบ (Login)</h3>
+                        <p className="text-[11px] text-gray-500 font-medium mb-5 px-2">กรุณาเข้าสู่ระบบเพื่อใช้งานระบบ AI ตรวจสอบสลิปอัตโนมัติ</p>
+                        
+                        <div className="space-y-3 mb-5 text-left">
+                          <div>
+                            <label className="text-[10px] font-bold text-gray-600 ml-1 mb-1 block">ชื่อผู้ใช้งาน (Username)</label>
+                            <input
+                               type="text"
+                               value={authInput.username}
+                               onChange={(e) => setAuthInput({...authInput, username: e.target.value})}
+                               className="w-full text-sm font-semibold border-2 border-gray-200 rounded-xl px-4 py-2.5 focus:border-indigo-500 focus:outline-none"
+                            />
+                          </div>
+                          <div className="relative">
+                            <label className="text-[10px] font-bold text-gray-600 ml-1 mb-1 block">รหัสผ่าน (Password)</label>
+                            <input
+                               type={showPassword ? "text" : "password"}
+                               value={authInput.password}
+                               onChange={(e) => setAuthInput({...authInput, password: e.target.value})}
+                               className="w-full text-sm font-semibold border-2 border-gray-200 rounded-xl pl-4 pr-10 py-2.5 focus:border-indigo-500 focus:outline-none"
+                            />
+                            <button
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()} 
+                              onClick={(e) => { e.preventDefault(); setShowPassword(!showPassword); }}
+                              className="absolute right-3 top-[26px] text-gray-400 hover:text-indigo-500 transition p-1"
+                            >
+                              {showPassword ? <Icons.EyeOff /> : <Icons.Eye />}
+                            </button>
+                          </div>
+                        </div>
+                        
+                        {authError && <p className="text-[11px] text-red-500 font-bold mb-3">{authError}</p>}
+                        
+                        <button onClick={(e) => { e.preventDefault(); handleAuthSubmit(false); }} className={`w-full py-3 bg-indigo-600 text-white font-bold text-xs rounded-xl shadow-lg shadow-indigo-500/30 mb-3 flex justify-center transition-all ${isScanningUI ? 'opacity-50 pointer-events-none' : 'hover:bg-indigo-700 active:scale-95'}`}>
+                          {isScanningUI ? <Icons.Loader className="w-4 h-4 text-white" /> : 'เข้าสู่ระบบ'}
+                        </button>
+
+                        {/* ปุ่มบังคับล็อกอิน กรณีมีเครื่องอื่นล็อกอินค้างไว้ */}
+                        {showForceLoginBtn && (
+                           <button onClick={(e) => { e.preventDefault(); handleAuthSubmit(true); }} className={`w-full py-2.5 bg-orange-100 text-orange-600 font-bold text-[11px] rounded-xl mb-4 flex items-center justify-center gap-1 transition-all ${isScanningUI ? 'opacity-50 pointer-events-none' : 'hover:bg-orange-200 active:scale-95'}`}>
+                             <Icons.MonitorOff className="w-3.5 h-3.5" /> บังคับออกจากระบบอุปกรณ์อื่น
+                           </button>
+                        )}
+
+                        <div className="text-[11px] text-gray-500 font-medium mt-1">
+                          ยังไม่ได้ลงทะเบียน? <button onClick={(e) => { e.preventDefault(); toggleAuthMode('register'); }} className="text-indigo-600 font-bold hover:underline ml-1">สร้างบัญชีผู้ใช้งาน</button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* หน้า สมัครสมาชิก (Register) */}
+                    {authMode === 'register' && (
+                      <div className="text-center pt-2">
+                        <h3 className="text-lg font-black text-gray-800 mb-1">ลงทะเบียนผู้ใช้งานใหม่</h3>
+                        <p className="text-[11px] text-gray-500 font-medium mb-5 px-2">สมัครสมาชิกเพื่อรับสิทธิ์การใช้งานระบบตรวจสอบสลิปด้วย AI</p>
+                        
+                        <div className="space-y-3 mb-5 text-left">
+                          <div>
+                            <label className="text-[10px] font-bold text-emerald-700 ml-1 mb-1 block">ชื่อผู้ใช้งาน (ตัวอักษรภาษาอังกฤษและตัวเลขเท่านั้น)</label>
+                            <input
+                               type="text"
+                               value={authInput.username}
+                               onChange={(e) => setAuthInput({...authInput, username: e.target.value})}
+                               className="w-full text-sm font-semibold border-2 border-emerald-100 bg-emerald-50/30 rounded-xl px-4 py-2.5 focus:border-emerald-500 focus:bg-white focus:outline-none transition"
+                            />
+                          </div>
+                          <div className="relative">
+                            <label className="text-[10px] font-bold text-emerald-700 ml-1 mb-1 block">รหัสผ่าน (Password)</label>
+                            <input
+                               type={showPassword ? "text" : "password"}
+                               value={authInput.password}
+                               onChange={(e) => setAuthInput({...authInput, password: e.target.value})}
+                               className="w-full text-sm font-semibold border-2 border-emerald-100 bg-emerald-50/30 rounded-xl pl-4 pr-10 py-2.5 focus:border-emerald-500 focus:bg-white focus:outline-none transition"
+                            />
+                            <button
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()} 
+                              onClick={(e) => { e.preventDefault(); setShowPassword(!showPassword); }}
+                              className="absolute right-3 top-[26px] text-emerald-600/50 hover:text-emerald-600 transition p-1"
+                            >
+                              {showPassword ? <Icons.EyeOff /> : <Icons.Eye />}
+                            </button>
+                          </div>
+                          <div className="relative">
+                            <label className="text-[10px] font-bold text-emerald-700 ml-1 mb-1 block">ยืนยันรหัสผ่าน (Confirm Password)</label>
+                            <input
+                               type={showConfirmPassword ? "text" : "password"}
+                               value={authInput.confirmPassword}
+                               onChange={(e) => setAuthInput({...authInput, confirmPassword: e.target.value})}
+                               className="w-full text-sm font-semibold border-2 border-emerald-100 bg-emerald-50/30 rounded-xl pl-4 pr-10 py-2.5 focus:border-emerald-500 focus:bg-white focus:outline-none transition"
+                            />
+                            <button
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()} 
+                              onClick={(e) => { e.preventDefault(); setShowConfirmPassword(!showConfirmPassword); }}
+                              className="absolute right-3 top-[26px] text-emerald-600/50 hover:text-emerald-600 transition p-1"
+                            >
+                              {showConfirmPassword ? <Icons.EyeOff /> : <Icons.Eye />}
+                            </button>
+                          </div>
+                        </div>
+                        
+                        {authError && <p className="text-[11px] text-red-500 font-bold mb-3 leading-tight">{authError}</p>}
+                        
+                        <button onClick={(e) => { e.preventDefault(); handleAuthSubmit(false); }} className={`w-full py-3 bg-emerald-600 text-white font-bold text-xs rounded-xl shadow-lg shadow-emerald-500/30 mb-4 flex justify-center transition-all ${isScanningUI ? 'opacity-50 pointer-events-none' : 'hover:bg-emerald-700 active:scale-95'}`}>
+                          {isScanningUI ? <Icons.Loader className="w-4 h-4 text-white" /> : 'ยืนยันการลงทะเบียน'}
+                        </button>
+
+                        <div className="text-[11px] text-gray-500 font-medium">
+                          มีบัญชีผู้ใช้งานแล้ว? <button onClick={(e) => { e.preventDefault(); toggleAuthMode('login'); }} className="text-emerald-600 font-bold hover:underline ml-1">เข้าสู่ระบบ</button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* หน้า เลือกแพ็กเกจรูปภาพ */}
+                    {authMode === 'packages' && (
+                      <div className="pt-2">
+                        <div className="text-center mb-4">
+                          <h3 className="text-lg font-black text-gray-800 mb-1">เลือกแพ็กเกจค่าบริการ</h3>
+                          <p className="text-[11px] text-gray-500 font-medium px-2">กรุณาเลือกแพ็กเกจเพื่อเปิดระบบการตรวจสอบสลิปอัตโนมัติ (Unlimited Scans)</p>
+                        </div>
+
+                        <div className="space-y-3 mb-5">
+                          {PACKAGE_OPTIONS.map((pkg) => (
+                            <div 
+                              key={pkg.id} 
+                              onClick={(e) => { e.preventDefault(); handleSelectPackage(pkg.id); }}
+                              className="rounded-2xl overflow-hidden cursor-pointer transition active:scale-95 shadow-sm hover:shadow-lg ring-1 ring-black/5 hover:ring-2 hover:ring-indigo-500"
+                            >
+                              <img src={pkg.imgUrl} alt={`แพ็กเกจ ${pkg.months} เดือน`} className="w-full h-auto object-cover block pointer-events-none" />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* หน้า สแกนชำระเงิน ด้วย QR พร้อมเพย์อัตโนมัติ */}
+                    {authMode === 'qr' && (
+                      <div className="pt-2 text-center flex flex-col items-center relative">
+                        <h3 className="text-lg font-black text-gray-800 mb-1">ชำระค่าบริการผ่าน QR Code</h3>
+                        <p className="text-[11px] text-gray-500 font-medium mb-3 px-2">
+                          แพ็กเกจที่เลือก: {PACKAGE_OPTIONS.find(p=>p.id===selectedPackage)?.months} เดือน ยอดชำระ <span className="font-bold text-indigo-600">฿{PACKAGE_OPTIONS.find(p=>p.id===selectedPackage)?.price}</span>
+                        </p>
+
+                        {/* ตัวนับเวลา */}
+                        {!isQrExpired && (
+                           <div className="mb-3 inline-flex items-center gap-1.5 bg-red-50 border border-red-100 text-red-600 px-3 py-1 rounded-full shadow-sm">
+                             <Icons.Clock className="w-3.5 h-3.5" />
+                             <span className="text-[10px] font-bold">เวลาที่เหลือ: {formatTime(qrTimeLeft)} นาที</span>
+                           </div>
+                        )}
+
+                        {/* กล่อง QR Code แบบวาดอัตโนมัติตามเลขและราคา */}
+                        <div className="bg-white p-2 rounded-2xl border-2 border-gray-100 shadow-md mb-4 w-48 h-48 flex items-center justify-center relative overflow-hidden">
+                           <img 
+                              src={`https://promptpay.io/${PROMPTPAY_ID}/${PACKAGE_OPTIONS.find(p=>p.id===selectedPackage)?.price}.png`} 
+                              alt="PromptPay QR Code" 
+                              className={`w-full h-full object-contain transition-all duration-300 ${isQrExpired ? 'blur-md opacity-40' : ''}`} 
+                           />
+                           
+                           {/* ข้อความและปุ่มทับ QR กรณีหมดอายุ */}
+                           {isQrExpired && (
+                              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/60 backdrop-blur-[2px]">
+                                 <Icons.XCircle className="w-8 h-8 text-red-500 mb-1" />
+                                 <span className="text-xs font-black text-gray-800 mb-2">QR Code หมดอายุ</span>
+                                 <button onClick={(e) => { e.preventDefault(); handleRegenerateQR(); }} className="flex items-center gap-1 bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold shadow-md hover:bg-indigo-700 transition active:scale-95">
+                                    <Icons.RefreshCw className="w-3 h-3" /> สร้าง QR ใหม่
+                                 </button>
+                              </div>
+                           )}
+                        </div>
+
+                        {/* ปุ่มอัปโหลดสลิป (ปิดใช้งานถ้าหมดอายุ) */}
+                        <div className="w-full">
+                           <input 
+                             type="file" 
+                             accept="image/*" 
+                             id="payment-slip" 
+                             className="hidden" 
+                             disabled={isQrExpired || isScanningUI}
+                             onChange={(e) => {
+                               if (e.target.files && e.target.files[0]) {
+                                 setPaymentSlip(e.target.files[0]);
+                                 setAuthError('');
+                               }
+                             }} 
+                           />
+                           <label 
+                             htmlFor="payment-slip" 
+                             className={`w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed rounded-xl transition mb-2 text-xs font-bold ${isQrExpired ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed' : (paymentSlip ? 'border-green-300 text-green-700 bg-green-50 hover:bg-green-100 cursor-pointer' : 'border-indigo-200 text-indigo-600 bg-indigo-50 hover:bg-indigo-100 cursor-pointer')}`}
+                           >
+                              {paymentSlip ? <Icons.Check className="w-4 h-4" /> : <Icons.UploadCloud className="w-4 h-4" />}
+                              {paymentSlip ? `แนบหลักฐานเรียบร้อย: ${paymentSlip.name.substring(0,12)}...` : 'แนบหลักฐานการโอนเงิน (e-Slip)'}
+                           </label>
+                           {authError && <p className="text-[10px] text-red-500 font-bold mb-2 leading-tight">{authError}</p>}
+                        </div>
+
+                        <div className="w-full flex gap-2 mt-2">
+                           <button onClick={(e) => { e.preventDefault(); setAuthMode('packages'); setPaymentSlip(null); }} className={`flex-1 py-3 bg-gray-100 text-gray-600 font-bold text-xs rounded-xl transition-all ${isScanningUI ? 'opacity-50 pointer-events-none' : 'hover:bg-gray-200 active:scale-95'}`}>ย้อนกลับ</button>
+                           <button onClick={(e) => { e.preventDefault(); verifyPaymentAutomatically(); }} className={`flex-[2] py-3 bg-[#2b9e57] text-white font-bold text-xs rounded-xl shadow-lg shadow-green-500/30 flex justify-center items-center gap-1 transition-all ${isScanningUI || isQrExpired ? 'opacity-50 pointer-events-none' : 'hover:bg-green-600 active:scale-95'}`}>
+                              {isScanningUI ? <Icons.Loader className="w-4 h-4 text-white" /> : 'ยืนยันและตรวจสอบสลิป'}
+                           </button>
+                        </div>
+                      </div>
+                    )}
+                 </div>
+              </div>
+            )}
+
+            {/* Modal: บันทึกยอด (ของระบบใช้งาน) */}
             {showSaveModal && (
               <div className="absolute inset-0 z-40 flex flex-col justify-end animate-fade-in bg-black/40 backdrop-blur-sm">
                 <div className="flex-1" onClick={() => setShowSaveModal(false)}></div>
-                <div className="bg-white w-full rounded-t-[2rem] pt-5 pb-safe px-5 shadow-2xl animate-slide-up flex flex-col relative">
-                  
+                
+                {isScanningUI && (
+                  <div className="absolute inset-0 z-50 flex items-center justify-center bg-gray-900/10 backdrop-blur-[2px] animate-fade-in px-5">
+                    <div className="bg-white shadow-2xl border border-gray-100 rounded-2xl p-4 flex items-center gap-4 w-full max-w-[340px] animate-slide-up">
+                        <div className="bg-indigo-50 p-2.5 rounded-full text-indigo-600 flex-shrink-0">
+                           <Icons.Loader className="w-6 h-6" />
+                        </div>
+                        <div className="flex flex-col text-left">
+                           <span className="text-sm font-black text-gray-800">กรุณารอสักครู่...</span>
+                           <span className="text-[10px] text-gray-500 font-medium mt-0.5">ระบบกำลังประมวลผลข้อมูล</span>
+                        </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="bg-white w-full rounded-t-[2rem] pt-5 pb-safe px-5 shadow-2xl animate-slide-up flex flex-col relative" onClick={(e) => e.stopPropagation()}>
                   <div className="flex justify-between items-center mb-4">
                     <div className="flex items-center gap-2 text-blue-600">
                       <Icons.Pen /><h2 className="text-lg font-black text-gray-800">บันทึกรายการใช้จ่าย</h2>
@@ -679,9 +1642,19 @@
                     <button onClick={() => setShowSaveModal(false)} className="p-2 bg-gray-100 rounded-full text-gray-500 active:scale-95"><Icons.X /></button>
                   </div>
 
+                  <div className="mb-4">
+                    <button 
+                      onClick={handleTriggerFileInput}
+                      className={`w-full py-2.5 flex items-center justify-center gap-2 font-bold text-xs rounded-xl shadow-sm transition-all ${isScanningUI ? 'bg-gray-100 text-gray-400 border border-gray-200 pointer-events-none' : 'bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 active:scale-95'}`}
+                    >
+                      <Icons.Camera className="w-4 h-4 mr-1" /> สแกนสลิปด้วย AI 
+                    </button>
+                    <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileUpload} className="hidden" />
+                  </div>
+
                   <div className="flex gap-3 mb-4">
                     <div className="flex-1 bg-gray-50 border border-gray-200 rounded-xl p-2.5 relative">
-                      <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wide block mb-1 ml-1">วันที่บันทึก</label>
+                      <label className="text-[9px] font-bold text-gray-400 uppercase tracking-wide block mb-1 ml-1">วันที่ทำรายการ</label>
                       <div className="flex items-center gap-1.5 bg-white p-1.5 rounded-lg border border-gray-100 shadow-sm">
                         <Icons.Calendar className="text-gray-400" />
                         <input type="date" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="w-full text-xs font-bold text-gray-700 bg-transparent focus:outline-none" />
@@ -697,29 +1670,51 @@
                   </div>
                   
                   <p className="text-xs font-semibold text-gray-500 mb-1.5">มูลค่าการใช้จ่าย</p>
-                  <div className="bg-gray-50 border-2 border-blue-200 rounded-xl p-3 flex items-center mb-4">
-                    <span className="text-xl font-bold text-gray-400 mr-2">฿</span>
-                    <input ref={saveInputRef} type="text" inputMode="decimal" value={saveInputValue} onChange={handleSaveInputChange} className="w-full text-3xl font-black text-blue-700 bg-transparent focus:outline-none p-0" placeholder="0" />
+                  
+                  {/* กล่องกรอกตัวเลข ในหน้าบันทึก พร้อมปุ่มลบกากบาทสีเทา */}
+                  <div className="bg-gray-50 border-2 border-blue-200 rounded-xl p-3 flex items-center mb-4 relative overflow-hidden">
+                    <span className="text-xl font-bold text-gray-400 mr-2 shrink-0">฿</span>
+                    <input 
+                      ref={saveInputRef} 
+                      type="text" 
+                      inputMode="decimal" 
+                      value={saveInputValue} 
+                      onChange={handleSaveInputChange} 
+                      className="w-full text-3xl font-black text-blue-700 bg-transparent focus:outline-none p-0 pr-8" 
+                      placeholder="0" 
+                    />
+                    {saveInputValue && (
+                      <button 
+                        type="button"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onTouchStart={(e) => e.preventDefault()}
+                        onClick={clearSaveInput} 
+                        className="absolute right-3 flex-shrink-0 bg-gray-300 hover:bg-gray-400 text-white rounded-full flex items-center justify-center w-6 h-6 transition-colors z-10 active:scale-95"
+                      >
+                        <Icons.X className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
 
                   <div className="bg-gray-50 rounded-xl p-3 mb-4 border border-gray-100 space-y-2">
                      <div className="flex justify-between items-center">
-                        <span className="text-xs font-bold text-emerald-800">รัฐช่วยจ่าย (หักโควตา {formatDisplayDateObj(selectedDateTimeObj)})</span>
-                        <span className={`text-base font-black ${saveInputValue ? 'text-emerald-600' : 'text-gray-300'}`}>- {formatNumber(saveGovtPaysPreview)} ฿</span>
+                        <span className="text-xs font-bold text-[#2b9e57]">รัฐช่วยจ่าย (หักโควตา {formatDisplayDateObj(selectedDateTimeObj)})</span>
+                        <span className={`text-base font-black ${saveInputValue ? 'text-[#2b9e57]' : 'text-gray-300'}`}>- {formatNumber(saveGovtPaysPreview)} ฿</span>
                      </div>
                      <div className="flex justify-between items-center">
-                        <span className="text-xs font-bold text-blue-800">คุณต้องจ่ายเอง (เป๋าตัง)</span>
-                        <span className={`text-base font-black ${saveInputValue ? 'text-blue-600' : 'text-gray-300'}`}>- {formatNumber(saveUserPaysPreview)} ฿</span>
+                        <span className="text-xs font-bold text-[#2563eb]">เป๋าตัง (จ่ายเอง)</span>
+                        <span className={`text-base font-black ${saveInputValue ? 'text-[#2563eb]' : 'text-gray-300'}`}>- {formatNumber(saveUserPaysPreview)} ฿</span>
                      </div>
                   </div>
 
-                  <button onClick={confirmSaveTransaction} disabled={!saveInputValue || saveTotalValuePreview <= 0} className={`h-12 w-full rounded-xl flex items-center justify-center transition-all text-base font-bold mb-2 ${saveInputValue && saveTotalValuePreview > 0 ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30 active:scale-95' : 'bg-gray-200 text-gray-400 pointer-events-none'}`}>
+                  <button onClick={(e) => { e.preventDefault(); confirmSaveTransaction(); }} className={`h-12 w-full rounded-xl flex items-center justify-center transition-all text-base font-bold mb-2 ${saveInputValue && saveTotalValuePreview > 0 ? 'bg-[#2563eb] text-white shadow-lg shadow-blue-500/30 active:scale-95' : 'bg-gray-200 text-gray-400 pointer-events-none'}`}>
                     บันทึก
                   </button>
                 </div>
               </div>
             )}
 
+            {/* Modal: ประวัติ */}
             {showHistory && (
               <div className="absolute inset-0 z-50 flex flex-col bg-gray-50 animate-slide-up">
                 <div className="pt-10 sm:pt-12 pb-3 px-4 bg-white border-b border-gray-200 flex justify-between items-center shadow-sm">
@@ -729,28 +1724,32 @@
 
                 <div className="flex-1 overflow-y-auto p-4 pb-safe bg-gray-50">
                   <div className="flex bg-gray-200 rounded-lg p-1 mb-4 shadow-inner">
-                    <button onClick={() => setHistoryFilter('today')} className={`flex-1 text-[11px] font-bold py-1.5 rounded-md transition ${historyFilter === 'today' ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>วันนี้</button>
-                    <button onClick={() => setHistoryFilter('month')} className={`flex-1 text-[11px] font-bold py-1.5 rounded-md transition ${historyFilter === 'month' ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>เดือนนี้</button>
-                    <button onClick={() => setHistoryFilter('all')} className={`flex-1 text-[11px] font-bold py-1.5 rounded-md transition ${historyFilter === 'all' ? 'bg-white shadow text-blue-600' : 'text-gray-500 hover:text-gray-700'}`}>ทั้งหมด</button>
+                    <button onClick={() => setHistoryFilter('today')} className={`flex-1 text-[11px] font-bold py-1.5 rounded-md transition ${historyFilter === 'today' ? 'bg-white shadow text-[#2563eb]' : 'text-gray-500 hover:text-gray-700'}`}>วันนี้</button>
+                    <button onClick={() => setHistoryFilter('month')} className={`flex-1 text-[11px] font-bold py-1.5 rounded-md transition ${historyFilter === 'month' ? 'bg-white shadow text-[#2563eb]' : 'text-gray-500 hover:text-gray-700'}`}>เดือนนี้</button>
+                    <button onClick={() => setHistoryFilter('all')} className={`flex-1 text-[11px] font-bold py-1.5 rounded-md transition ${historyFilter === 'all' ? 'bg-white shadow text-[#2563eb]' : 'text-gray-500 hover:text-gray-700'}`}>ทั้งหมด</button>
                   </div>
 
-                  <div className="bg-gray-800 rounded-xl p-4 mb-5 text-white shadow-lg relative overflow-hidden">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-5 rounded-full -mr-10 -mt-10 pointer-events-none"></div>
-                    <p className="text-xs font-medium text-gray-300 mb-1 relative z-10">
-                      {historyFilter === 'today' ? 'รัฐช่วยจ่าย (ยอดรวมวันนี้)' : historyFilter === 'month' ? 'รัฐช่วยจ่าย (ยอดรวมเดือนนี้)' : 'รัฐช่วยจ่าย (ยอดรวมทั้งโครงการ)'}
-                    </p>
+                  <div className="bg-white rounded-xl p-4 mb-3 text-gray-800 shadow-sm border border-gray-200 relative overflow-hidden bg-cover bg-center" 
+                       style={{ backgroundImage: "url('https://img1.pic.in.th/images/B5392837-DEBE-40E8-B856-E3F6DDD28DB2.jpeg')" }}>
+                    <p className="text-xs font-bold text-gray-600 mb-1 relative z-10">สิทธิไทยช่วยไทยพลัส</p>
                     <div className="flex items-baseline mb-3 relative z-10">
-                      <span className="text-3xl font-black text-emerald-400">{formatNumber(filteredTransactions.reduce((s,t) => s + (t.govtPays || 0), 0))}</span>
-                      <span className="ml-2 text-base font-bold text-gray-400">
-                        / {historyFilter === 'today' ? '200' : historyFilter === 'month' ? '1,000' : '4,000'} ฿
+                      <span className="text-3xl font-black text-[#3b368c]">{formatNumber(filteredTransactions.reduce((s,t) => s + (t.govtPays || 0), 0))}</span>
+                      <span className="ml-2 text-sm font-bold text-gray-500">
+                        / {historyFilter === 'today' ? '200' : historyFilter === 'month' ? '1,000' : '4,000'} บาท
                       </span>
                     </div>
-                    {historyFilter !== 'all' && (
-                      <div className="flex justify-between text-[10px] sm:text-xs font-semibold text-gray-300 border-t border-gray-700 pt-2.5 relative z-10">
-                        <span>ใช้เป๋าตังไปแล้ว: ฿{formatNumber(filteredTransactions.reduce((s,t) => s + (t.userPays || 0), 0))}</span>
-                        <span>จำนวนเงินรวม: ฿{formatNumber(filteredTransactions.reduce((s,t) => s + (t.totalValue || 0), 0))}</span>
-                      </div>
-                    )}
+                    <div className="flex justify-between text-[10px] sm:text-xs font-bold text-gray-600 border-t border-gray-300/60 pt-2.5 relative z-10">
+                      <span>G-Wallet: {formatNumber(filteredTransactions.reduce((s,t) => s + (t.userPays || 0), 0))} บาท</span>
+                      <span>จำนวนเงินรวม: {formatNumber(filteredTransactions.reduce((s,t) => s + (t.totalValue || 0), 0))} บาท</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-100 rounded-xl p-3 mb-4 flex items-start gap-2.5">
+                    <Icons.Info className="text-gray-500 shrink-0 w-4 h-4 mt-0.5" />
+                    <p className="text-[10px] sm:text-[11px] text-gray-600 font-medium leading-relaxed">
+                      สิทธิรัฐช่วยจ่าย 60% ไม่เกินวันละ 200 บาท สูงสุดไม่เกิน 1,000 บาทต่อเดือน ทั้งหมด 4 เดือน รวมทั้งหมด 4,000 บาท<br/><br/>
+                      ใช้สิทธิไทยช่วยไทยพลัสได้ตั้งแต่ 06:00 - 23:00 น. สิทธิคงเหลือของแต่ละเดือนจะไม่สะสมไปยังเดือนถัดไปและไม่สามารถทอนเงิน/รับแลกคืนสินค้าหรือบริการเป็นเงินสด
+                    </p>
                   </div>
 
                   <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
@@ -758,8 +1757,24 @@
                   </h3>
                   
                   {renderHistoryList()}
-
                 </div>
+              </div>
+            )}
+
+            {/* 🛡️ Modal: ยืนยันการลบข้อมูล */}
+            {deleteConfirmId && (
+              <div className="absolute inset-0 z-[100] flex items-center justify-center bg-gray-900/40 backdrop-blur-sm animate-fade-in px-6">
+                 <div className="bg-white rounded-[1.5rem] p-5 w-full max-w-[300px] shadow-2xl animate-slide-up text-center border border-gray-100">
+                    <div className="w-14 h-14 bg-red-50 text-red-500 rounded-full flex items-center justify-center mx-auto mb-3">
+                       <Icons.Trash className="w-7 h-7" />
+                    </div>
+                    <h3 className="text-base font-black text-gray-800 mb-1.5">ยืนยันลบรายการ?</h3>
+                    <p className="text-[11px] text-gray-500 font-medium mb-5 px-2">ข้อมูลที่ถูกลบจะไม่สามารถกู้คืนได้ และยอดโควตาจะถูกคำนวณคืนให้ใหม่</p>
+                    <div className="flex gap-2.5">
+                       <button onClick={() => setDeleteConfirmId(null)} className="flex-1 py-3 bg-gray-100 text-gray-600 font-bold text-xs rounded-xl hover:bg-gray-200 transition active:scale-95">ยกเลิก</button>
+                       <button onClick={() => executeDelete(deleteConfirmId)} className="flex-1 py-3 bg-red-500 text-white font-bold text-xs rounded-xl hover:bg-red-600 transition active:scale-95 shadow-lg shadow-red-500/30">ลบข้อมูล</button>
+                    </div>
+                 </div>
               </div>
             )}
 
@@ -773,5 +1788,4 @@
   </script>
 </body>
 </html>
-
 
